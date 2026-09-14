@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lyrics Creator</title>
+<title>Lyrics Creator Auto</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -23,8 +23,6 @@ header{display:grid;grid-template-columns:56px 1fr 56px;align-items:center;paddi
 header h1{font-size:1.75rem;font-weight:700;letter-spacing:-.02em}
 header h1 span{color:var(--accent)}
 header p{color:var(--text-dim);font-size:.85rem;margin-top:4px}
-.page-switch{margin-top:8px;font-size:.78rem}
-.page-switch a{font-weight:600}
 
 section{background:var(--surface);border-radius:12px;padding:20px 24px;margin-top:18px}
 section h2{font-size:1rem;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px}
@@ -73,8 +71,10 @@ section h2 .icon{font-size:1.1rem}
 #phrase-table th{text-align:left;color:var(--text-dim);font-weight:500;padding:6px 10px;border-bottom:1px solid var(--border)}
 #phrase-table td{padding:6px 10px;border-bottom:1px solid var(--border)}
 #phrase-table .color-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
-#phrase-table .phrase-visual{display:block;width:220px;height:22px}
-#phrase-table td.visual-cell{width:240px}
+#phrase-table .phrase-visual{display:block;width:220px;height:22px;color:var(--text)}
+#phrase-table .phrase-visual.has-lyrics{width:320px;height:40px}
+#phrase-table td.visual-cell{width:340px;min-width:260px;vertical-align:middle}
+#phrase-table .phrase-visual.mismatch text{fill:var(--orange)}
 .phrase-table-bar{display:flex;align-items:center;gap:10px;margin:12px 0 8px;flex-wrap:wrap}
 .phrase-table-bar .hint{font-size:.78rem;color:var(--text-dim)}
 
@@ -90,6 +90,7 @@ section h2 .icon{font-size:1.1rem}
 .form-grid input,.form-grid textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:.85rem;font-family:inherit;resize:vertical}
 .form-grid textarea{min-height:60px}
 .btn{padding:10px 24px;border:none;border-radius:8px;font-size:.85rem;font-weight:600;cursor:pointer;transition:transform .1s,box-shadow .15s}
+.btn:disabled{opacity:.55;cursor:wait}
 .btn:active{transform:scale(.97)}
 .btn-accent{background:var(--accent);color:#fff}
 .btn-accent:hover{box-shadow:0 0 18px rgba(124,108,255,.45)}
@@ -106,7 +107,16 @@ section h2 .icon{font-size:1.1rem}
 #io-status{font-size:.78rem;color:var(--green)}
 #io-status.error{color:var(--red)}
 #tap-import-input{display:none}
-#prompt-output{width:100%;min-height:140px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;color:var(--text-dim);font-family:'SF Mono',Consolas,monospace;font-size:.78rem;margin-top:12px;resize:vertical}
+#prompt-output,#lyrics-output{width:100%;min-height:140px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;color:var(--text-dim);font-family:'SF Mono',Consolas,monospace;font-size:.78rem;margin-top:12px;resize:vertical}
+#lyrics-output{color:var(--text);min-height:180px}
+#generate-status{font-size:.82rem;align-self:center}
+#generate-status.error{color:var(--red)}
+#generate-status.ok{color:var(--green)}
+.page-switch{margin-top:8px;font-size:.78rem}
+.page-switch a{font-weight:600}
+.llm-grid{display:grid;gap:12px;margin-bottom:16px}
+.llm-grid label{display:block;font-size:.78rem;color:var(--text-dim);margin-bottom:4px}
+.llm-grid input,.llm-grid select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:.85rem;font-family:inherit}
 
 #settings-section details{border:none}
 #settings-section summary{cursor:pointer;font-size:1rem;font-weight:600;list-style:none;display:flex;align-items:center;gap:8px}
@@ -127,7 +137,8 @@ section h2 .icon{font-size:1.1rem}
   section{padding:16px}
   header{grid-template-columns:40px 1fr;gap:8px}
   .site-logo img{height:36px;width:36px}
-  #phrase-table .phrase-visual{width:160px}
+  #phrase-table .phrase-visual{width:180px}
+  #phrase-table .phrase-visual.has-lyrics{width:220px}
 }
 </style>
 </head>
@@ -138,9 +149,9 @@ section h2 .icon{font-size:1.1rem}
       <img src="shibz-logo-b.jpg" alt="shibZ">
     </a>
     <div class="header-copy">
-      <h1>Lyrics <span>Creator</span></h1>
-      <p>Upload a track, tap syllables to the beat, then generate a prompt for your AI lyricist.</p>
-      <p class="page-switch"><a href="lyrics-creator-auto.html">Switch to auto-generate version</a></p>
+      <h1>Lyrics <span>Creator Auto</span></h1>
+      <p>Upload a track, tap syllables, then generate lyrics with an LLM from this page.</p>
+      <p class="page-switch"><a href="lyrics-creator.html">Switch to prompt-only version</a></p>
     </div>
   </header>
 
@@ -199,6 +210,7 @@ section h2 .icon{font-size:1.1rem}
         <button type="button" class="btn btn-ghost" id="export-btn">Export taps</button>
         <button type="button" class="btn btn-ghost" id="import-btn">Import taps</button>
         <button type="button" class="btn btn-process" id="process-btn">Process so far</button>
+        <button type="button" class="btn btn-accent" id="generate-btn-bar">Generate lyrics</button>
       </div>
       <span id="io-status"></span>
     </div>
@@ -229,16 +241,34 @@ section h2 .icon{font-size:1.1rem}
       <div class="full" style="display:flex;gap:10px;flex-wrap:wrap">
         <button type="button" class="btn btn-process" id="process-btn-2">Process so far</button>
         <button type="button" class="btn btn-accent" id="copy-prompt-btn">Copy Prompt</button>
+        <button type="button" class="btn btn-accent" id="generate-btn">Generate lyrics</button>
         <span id="copy-confirm" style="font-size:.82rem;color:var(--green);align-self:center;display:none">Copied!</span>
+        <span id="generate-status"></span>
       </div>
     </div>
     <textarea id="prompt-output" readonly placeholder="Generated prompt will appear here…"></textarea>
+    <label for="lyrics-output" style="display:block;margin-top:16px;font-size:.78rem;color:var(--text-dim)">Lyrics Generated</label>
+    <textarea id="lyrics-output" placeholder="Generated lyrics will appear here…"></textarea>
   </section>
 
   <section id="settings-section">
     <details>
       <summary>Settings</summary>
       <div class="settings-body">
+        <h3 style="font-size:.9rem;margin-bottom:10px">OpenRouter</h3>
+        <div class="llm-grid">
+          <div>
+            <label for="llm-model">Free model</label>
+            <select id="llm-model">
+              <option value="openrouter/free">Auto — any free model</option>
+            </select>
+          </div>
+          <div>
+            <label for="llm-key">OpenRouter API key (optional if the server already has one)</label>
+            <input type="password" id="llm-key" placeholder="sk-or-…" autocomplete="off">
+          </div>
+        </div>
+        <p class="setting-help">Get a key at <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a>. Generate is limited to OpenRouter <strong>free</strong> models only (ids ending in <code>:free</code>, or Auto). Paid models are blocked. A key pasted here stays in this browser. Audio is never sent.</p>
         <div class="slider-row">
           <label>Enter starts the next line with a tap:</label>
           <button type="button" class="btn btn-ghost btn-toggle on" id="enter-tap-toggle" aria-pressed="true">Enabled</button>
@@ -284,6 +314,19 @@ section h2 .icon{font-size:1.1rem}
 
 const STORAGE_KEY = 'shibZLyricsSession';
 const PREFS_KEY = 'shibZLyricsPrefs';
+const LLM_PREFS_KEY = 'shibZLyricsLlm';
+const GENERATED_KEY = 'shibZLyricsGenerated';
+const DEFAULT_LLM_MODEL = 'openrouter/free';
+const OPENROUTER_FREE_MAX_PRICE = { prompt: 0, completion: 0, request: 0 };
+const FALLBACK_FREE_MODELS = [
+  { id: 'openrouter/free', name: 'Auto — any free model' },
+  { id: 'google/gemma-4-31b-it:free', name: 'Google: Gemma 4 31B (free)' },
+  { id: 'google/gemma-4-26b-a4b-it:free', name: 'Google: Gemma 4 26B A4B (free)' },
+  { id: 'thinkingmachines/inkling:free', name: 'Thinking Machines: Inkling (free)' },
+  { id: 'thinkingmachines/inkling-small:free', name: 'Thinking Machines: Inkling Small (free)' },
+  { id: 'nvidia/nemotron-3.5-lightning:free', name: 'NVIDIA: Nemotron 3.5 Lightning (free)' },
+  { id: 'meta-llama/llama-3.2-3b-instruct:free', name: 'Meta: Llama 3.2 3B Instruct (free)' }
+];
 const SPEED_RATES = [2, 1, 0.75, 0.5, 0.33, 0.25, 0.15];
 const SEEK_STEP = 2;
 const DEFAULT_DEVICE_SKEW_MS = 500;
@@ -348,6 +391,12 @@ const extraInput = document.getElementById('extra-input');
 const copyBtn = document.getElementById('copy-prompt-btn');
 const processBtn = document.getElementById('process-btn');
 const processBtn2 = document.getElementById('process-btn-2');
+const generateBtn = document.getElementById('generate-btn');
+const generateBtnBar = document.getElementById('generate-btn-bar');
+const generateStatus = document.getElementById('generate-status');
+const lyricsOutput = document.getElementById('lyrics-output');
+const llmModel = document.getElementById('llm-model');
+const llmKey = document.getElementById('llm-key');
 const exportBtn = document.getElementById('export-btn');
 const importBtn = document.getElementById('import-btn');
 const importBtnUpload = document.getElementById('import-btn-upload');
@@ -949,29 +998,33 @@ function shibZDetectPhrases(){
   return phrases;
 }
 
-function shibZVisualPhrase(ph, color){
-  const W=220, H=22, pad=8, r=4;
-  const start=ph[0], end=ph[ph.length-1];
-  const span=Math.max(end-start, 0.08);
-  const xs=ph.map(t => ph.length===1 ? W/2 : pad+((t-start)/span)*(W-pad*2));
-  let svg=`<line x1="${pad}" y1="${H/2}" x2="${W-pad}" y2="${H/2}" stroke="${color}" stroke-opacity="0.28" stroke-width="2" stroke-linecap="round"/>`;
-  for(let i=1;i<xs.length;i++){
-    const gap=ph[i]-ph[i-1];
-    const mid=(xs[i-1]+xs[i])/2;
-    const ticks=Math.min(6, Math.max(1, Math.round(gap/0.18)));
-    for(let k=1;k<=ticks;k++){
-      const x=xs[i-1]+(xs[i]-xs[i-1])*(k/(ticks+1));
-      svg+=`<circle cx="${x.toFixed(1)}" cy="${H/2}" r="1.3" fill="${color}" fill-opacity="0.35"/>`;
-    }
-  }
-  xs.forEach(x=>{
-    svg+=`<circle cx="${x.toFixed(1)}" cy="${H/2}" r="${r}" fill="${color}"/>`;
+function shibZEscXml(s){
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+function shibZParseLyricLines(raw, phraseCount){
+  let text = String(raw||'').replace(/^\uFEFF/, '').trim();
+  if(!text || phraseCount<1) return Array.from({length:phraseCount}, ()=>[]);
+  text = text.replace(/^```[a-zA-Z]*\s*/, '').replace(/\s*```$/, '');
+  const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(l=>{
+    if(!l) return false;
+    if(/^(lyrics\s*:|here('s| is)|sure[,.]|output\s*:)/i.test(l) && !l.includes('|')) return false;
+    return true;
   });
-  const gaps=ph.slice(1).map((t,i)=>(t-ph[i]).toFixed(2)+'s');
-  const label=ph.length===1
-    ? '1 syllable'
-    : ph.length+' syllables, gaps '+gaps.join(', ');
-  return `<svg class="phrase-visual" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${label}"><title>${label}</title>${svg}</svg>`;
+  const piped = lines.filter(l=>l.includes('|'));
+  const use = piped.length ? piped : lines;
+  const out = [];
+  for(let i=0;i<phraseCount;i++){
+    const line = use[i] || '';
+    if(!line){ out.push([]); continue; }
+    if(line.includes('|')) out.push(line.split('|').map(s=>s.trim()).filter(s=>s!==''));
+    else out.push(line.split(/\s+/).filter(Boolean));
+  }
+  return out;
 }
 
 function shibZSyncPhraseOrderBtn(){
@@ -980,8 +1033,45 @@ function shibZSyncPhraseOrderBtn(){
   if(phraseOrderBtn) phraseOrderBtn.setAttribute('aria-pressed', phraseNewestFirst ? 'true' : 'false');
 }
 
+function shibZVisualPhrase(ph, color, syllables){
+  const hasLyrics = Array.isArray(syllables) && syllables.some(s=>s);
+  const W = hasLyrics ? 320 : 220;
+  const H = hasLyrics ? 40 : 22;
+  const pad = 10;
+  const r = 4;
+  const lineY = hasLyrics ? 10 : H/2;
+  const start=ph[0], end=ph[ph.length-1];
+  const span=Math.max(end-start, 0.08);
+  const xs=ph.map(t => ph.length===1 ? W/2 : pad+((t-start)/span)*(W-pad*2));
+  let svg=`<line x1="${pad}" y1="${lineY}" x2="${W-pad}" y2="${lineY}" stroke="${color}" stroke-opacity="0.28" stroke-width="2" stroke-linecap="round"/>`;
+  for(let i=1;i<xs.length;i++){
+    const gap=ph[i]-ph[i-1];
+    const ticks=Math.min(6, Math.max(1, Math.round(gap/0.18)));
+    for(let k=1;k<=ticks;k++){
+      const x=xs[i-1]+(xs[i]-xs[i-1])*(k/(ticks+1));
+      svg+=`<circle cx="${x.toFixed(1)}" cy="${lineY}" r="1.3" fill="${color}" fill-opacity="0.35"/>`;
+    }
+  }
+  xs.forEach((x, idx)=>{
+    svg+=`<circle cx="${x.toFixed(1)}" cy="${lineY}" r="${r}" fill="${color}"/>`;
+    if(hasLyrics && syllables[idx]){
+      svg+=`<text x="${x.toFixed(1)}" y="34" text-anchor="middle" fill="currentColor" font-size="9" font-family="Segoe UI,system-ui,sans-serif">${shibZEscXml(syllables[idx])}</text>`;
+    }
+  });
+  const gaps=ph.slice(1).map((t,i)=>(t-ph[i]).toFixed(2)+'s');
+  const lyricLine = hasLyrics ? syllables.join(' | ') : '';
+  const label=ph.length===1
+    ? '1 syllable'
+    : ph.length+' syllables, gaps '+gaps.join(', ');
+  const fullLabel = lyricLine ? label+' — '+lyricLine : label;
+  const mismatch = hasLyrics && syllables.length !== ph.length;
+  const cls = 'phrase-visual'+(hasLyrics?' has-lyrics':'')+(mismatch?' mismatch':'');
+  return `<svg class="${cls}" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${shibZEscXml(fullLabel)}"><title>${shibZEscXml(fullLabel)}</title>${svg}</svg>`;
+}
+
 function shibZUpdatePhraseTable(){
   const phrases = shibZDetectPhrases();
+  const lyricLines = lyricsOutput ? shibZParseLyricLines(lyricsOutput.value, phrases.length) : [];
   phraseTbody.innerHTML='';
   tapBadge.textContent = taps.length+' tap'+(taps.length===1?'':'s');
   lineBadge.textContent = phrases.length+' line'+(phrases.length===1?'':'s');
@@ -1003,7 +1093,7 @@ function shibZUpdatePhraseTable(){
     const color = PHRASE_COLORS[i%PHRASE_COLORS.length];
     const start=ph[0], end=ph[ph.length-1];
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td><span class="color-dot" style="background:${color}"></span>${i+1}</td><td>${ph.length}</td><td class="visual-cell">${shibZVisualPhrase(ph,color)}</td><td>${shibZFmtTime(start)}</td><td>${shibZFmtTime(end)}</td><td>${(end-start).toFixed(2)}s</td>`;
+    tr.innerHTML=`<td><span class="color-dot" style="background:${color}"></span>${i+1}</td><td>${ph.length}</td><td class="visual-cell">${shibZVisualPhrase(ph,color,lyricLines[i])}</td><td>${shibZFmtTime(start)}</td><td>${shibZFmtTime(end)}</td><td>${(end-start).toFixed(2)}s</td>`;
     phraseTbody.appendChild(tr);
   }
 }
@@ -1412,9 +1502,225 @@ function shibZProcess(opts){
   shibZSaveSession();
 }
 
+function shibZIsFreeOpenRouterModel(id){
+  const model = (id || '').trim();
+  return model === 'openrouter/free' || model.endsWith(':free');
+}
+
+function shibZRequireFreeModel(raw){
+  const model = (raw || '').trim();
+  if(shibZIsFreeOpenRouterModel(model)) return model;
+  return DEFAULT_LLM_MODEL;
+}
+
+function shibZFillFreeModelSelect(models, selected){
+  const want = shibZRequireFreeModel(selected);
+  const seen = new Set();
+  const list = [];
+  const add = (m)=>{
+    if(!m || !shibZIsFreeOpenRouterModel(m.id) || seen.has(m.id)) return;
+    seen.add(m.id);
+    list.push({ id: m.id, name: m.id === 'openrouter/free' ? 'Auto — any free model' : (m.name || m.id) });
+  };
+  add({ id: 'openrouter/free', name: 'Auto — any free model' });
+  (models || []).forEach(add);
+  add({ id: want, name: want });
+  list.sort((a,b)=>{
+    if(a.id === 'openrouter/free') return -1;
+    if(b.id === 'openrouter/free') return 1;
+    return a.name.localeCompare(b.name);
+  });
+  llmModel.innerHTML = '';
+  list.forEach(m=>{
+    const opt = document.createElement('option');
+    opt.value = m.id;
+    opt.textContent = m.name;
+    llmModel.appendChild(opt);
+  });
+  llmModel.value = want;
+  if(llmModel.value !== want) llmModel.value = DEFAULT_LLM_MODEL;
+}
+
+async function shibZLoadFreeModels(){
+  shibZFillFreeModelSelect(FALLBACK_FREE_MODELS, llmModel.value);
+  try {
+    const res = await fetch('https://openrouter.ai/api/v1/models');
+    const data = await res.json().catch(()=>({}));
+    const free = (data.data || [])
+      .filter(m => m && shibZIsFreeOpenRouterModel(m.id))
+      .map(m => ({ id: m.id, name: m.name || m.id }));
+    if(free.length) shibZFillFreeModelSelect(free, llmModel.value);
+  } catch(e){}
+  shibZSaveLlmPrefs();
+}
+
+function shibZSaveLlmPrefs(){
+  try {
+    localStorage.setItem(LLM_PREFS_KEY, JSON.stringify({
+      provider: 'openrouter',
+      model: shibZRequireFreeModel(llmModel.value),
+      apiKey: llmKey.value
+    }));
+  } catch(e){}
+}
+
+function shibZApplyLlmPrefs(){
+  let prefs = {};
+  try { prefs = JSON.parse(localStorage.getItem(LLM_PREFS_KEY) || 'null') || {}; }
+  catch(e){ prefs = {}; }
+  shibZFillFreeModelSelect(FALLBACK_FREE_MODELS, prefs.model);
+  if(typeof prefs.apiKey === 'string') llmKey.value = prefs.apiKey;
+}
+
+function shibZSetGenerateStatus(msg, kind){
+  generateStatus.textContent = msg || '';
+  generateStatus.className = kind || '';
+}
+
+function shibZSetGenerateBusy(busy){
+  [generateBtn, generateBtnBar].forEach(btn=>{
+    if(!btn) return;
+    btn.disabled = !!busy;
+  });
+}
+
+function shibZRestoreGenerated(){
+  try {
+    const saved = localStorage.getItem(GENERATED_KEY);
+    if(typeof saved === 'string') lyricsOutput.value = saved;
+  } catch(e){}
+}
+
+function shibZLlmMessageText(content){
+  if(typeof content === 'string') return content;
+  if(Array.isArray(content)){
+    return content.map(part=>{
+      if(typeof part === 'string') return part;
+      if(part && typeof part.text === 'string') return part.text;
+      return '';
+    }).join('');
+  }
+  return '';
+}
+
+function shibZOpenRouterError(data, status){
+  const err = data && data.error;
+  if(typeof err === 'string' && err.trim()) return err;
+  if(err && typeof err.message === 'string' && err.message.trim()) return err.message;
+  if(typeof data?.message === 'string' && data.message.trim()) return data.message;
+  return 'OpenRouter request failed ('+status+').';
+}
+
+async function shibZCallOpenRouter(apiKey, model, prompt){
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: 'Bearer '+apiKey,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': 'https://lyrics.shibz.uk',
+      'X-Title': 'Lyrics Creator Auto'
+    },
+    body: JSON.stringify({
+      model,
+      temperature: 0.8,
+      max_tokens: 2048,
+      provider: { max_price: OPENROUTER_FREE_MAX_PRICE },
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a lyricist. Follow the user prompt exactly. Output only the lyrics, one line per phrase, with every syllable separated by |. No commentary.'
+        },
+        { role: 'user', content: prompt }
+      ]
+    })
+  });
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error(shibZOpenRouterError(data, res.status));
+  const text = shibZLlmMessageText(data?.choices?.[0]?.message?.content);
+  if(!text.trim()) throw new Error('The model returned empty lyrics.');
+  return { lyrics: text.trim(), model: typeof data.model === 'string' ? data.model : model };
+}
+
+async function shibZCallLocalGenerateApi(model, prompt, apiKey){
+  const res = await fetch('/api/generate-lyrics', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, model, apiKey })
+  });
+  const contentType = res.headers.get('content-type') || '';
+  const data = contentType.includes('application/json') ? await res.json().catch(()=>({})) : {};
+  if(!res.ok){
+    if(res.status === 404 || !contentType.includes('application/json')){
+      throw new Error('This page is not being served by Next.js, so the server generate route is missing. Paste an OpenRouter key in Settings to generate from the browser.');
+    }
+    throw new Error(data.error || 'Generation failed ('+res.status+').');
+  }
+  if(typeof data.lyrics !== 'string' || !data.lyrics.trim()){
+    throw new Error('The model returned empty lyrics.');
+  }
+  return { lyrics: data.lyrics.trim(), model: typeof data.model === 'string' ? data.model : model };
+}
+
+async function shibZGenerate(){
+  const result = shibZBuildPrompt();
+  promptOutput.value = result.text;
+  promptSection.style.display = 'block';
+  if(!result.ok){
+    shibZSetGenerateStatus(result.text, 'error');
+    promptSection.scrollIntoView({ behavior:'smooth', block:'start' });
+    return;
+  }
+  const model = shibZRequireFreeModel(llmModel.value);
+  if(!shibZIsFreeOpenRouterModel(model)){
+    shibZSetGenerateStatus('Only OpenRouter free models are allowed (openrouter/free or a :free model).', 'error');
+    return;
+  }
+  if(model !== llmModel.value){
+    llmModel.value = model;
+    shibZSaveLlmPrefs();
+  }
+  shibZSetGenerateStatus('Generating…');
+  shibZSetGenerateBusy(true);
+  try {
+    const apiKey = (llmKey.value || '').trim();
+    const out = apiKey
+      ? await shibZCallOpenRouter(apiKey, model, result.text)
+      : await shibZCallLocalGenerateApi(model, result.text, '');
+    lyricsOutput.value = out.lyrics;
+    try { localStorage.setItem(GENERATED_KEY, lyricsOutput.value); } catch(e){}
+    shibZUpdatePhraseTable();
+    const used = out.model || model;
+    shibZSetGenerateStatus('Lyrics ready · '+used, 'ok');
+    const tableWrap = document.getElementById('phrase-table-wrap');
+    if(tableWrap) tableWrap.scrollIntoView({ behavior:'smooth', block:'start' });
+  } catch(err){
+    shibZSetGenerateStatus(err && err.message ? err.message : 'Generation failed.', 'error');
+  } finally {
+    shibZSetGenerateBusy(false);
+  }
+}
+
 copyBtn.addEventListener('click', ()=> shibZProcess({ scroll:false }));
 processBtn.addEventListener('click', ()=> shibZProcess({ scroll:true }));
 processBtn2.addEventListener('click', ()=> shibZProcess({ scroll:false }));
+generateBtn.addEventListener('click', shibZGenerate);
+generateBtnBar.addEventListener('click', shibZGenerate);
+[llmModel, llmKey].forEach(el=>{
+  el.addEventListener('input', shibZSaveLlmPrefs);
+  el.addEventListener('change', shibZSaveLlmPrefs);
+});
+lyricsOutput.addEventListener('input', ()=>{
+  try { localStorage.setItem(GENERATED_KEY, lyricsOutput.value); } catch(e){}
+  shibZUpdatePhraseTable();
+});
+if(phraseOrderBtn){
+  phraseOrderBtn.addEventListener('click', ()=>{
+    phraseNewestFirst = !phraseNewestFirst;
+    shibZSyncPhraseOrderBtn();
+    shibZUpdatePhraseTable();
+    shibZSavePrefs();
+  });
+}
 exportBtn.addEventListener('click', shibZExportTaps);
 importBtn.addEventListener('click', shibZOpenImportPicker);
 importBtnUpload.addEventListener('click', e=>{
@@ -1437,14 +1743,6 @@ tapImportInput.addEventListener('change', async ()=>{
   el.addEventListener('input', shibZSavePrefs);
   el.addEventListener('change', shibZSavePrefs);
 });
-if(phraseOrderBtn){
-  phraseOrderBtn.addEventListener('click', ()=>{
-    phraseNewestFirst = !phraseNewestFirst;
-    shibZSyncPhraseOrderBtn();
-    shibZUpdatePhraseTable();
-    shibZSavePrefs();
-  });
-}
 
 deviceSkewToggle.addEventListener('click', ()=>{
   shibZSetDeviceSkewEnabled(!deviceSkewEnabled, true);
@@ -1492,6 +1790,9 @@ window.addEventListener('resize',()=>{
 });
 
 shibZApplyPrefs();
+shibZApplyLlmPrefs();
+shibZLoadFreeModels();
+shibZRestoreGenerated();
 const saved = shibZReadSession();
 if(saved && typeof saved.playbackRate === 'number'){
   shibZSetSpeed(saved.playbackRate, false);
