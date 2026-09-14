@@ -22,6 +22,7 @@ header{display:grid;grid-template-columns:56px 1fr 56px;align-items:center;paddi
 .header-copy{text-align:center}
 header h1{font-size:1.75rem;font-weight:700;letter-spacing:-.02em}
 header h1 span{color:var(--accent)}
+header h1 .egg-o{cursor:pointer}
 header p{color:var(--text-dim);font-size:.85rem;margin-top:4px}
 .page-switch{margin-top:8px;font-size:.78rem}
 .page-switch a{font-weight:600}
@@ -108,7 +109,8 @@ section h2 .icon{font-size:1.1rem}
 #phrase-table .col-dur,#phrase-table td.dur-cell{width:4.2rem;padding-left:4px;padding-right:4px;white-space:nowrap;font-variant-numeric:tabular-nums;font-size:.72rem}
 #phrase-table .visual-frame{display:block;width:100%;min-width:0;line-height:0}
 #phrase-table .phrase-visual{display:block;width:100%;height:auto;aspect-ratio:220/22;overflow:visible}
-#phrase-table .tap-dot,#phrase-table .tap-hit{cursor:context-menu}
+#phrase-table .tap-dot,#phrase-table .tap-hit{cursor:pointer}
+#phrase-table .tap-dot.kind-s,#phrase-table .tap-dot.kind-l,#phrase-table .tap-dot.kind-u{cursor:pointer}
 #phrase-table .tap-dot.played{filter:brightness(1.35)}
 #phrase-table .tap-dot.active{stroke:#fff;stroke-width:2.4;filter:drop-shadow(0 0 5px #fff)}
 .phrase-diagram{margin-top:16px;border:1px solid var(--border);border-radius:10px;padding:14px 16px 12px;background:rgba(0,0,0,.18)}
@@ -120,6 +122,11 @@ section h2 .icon{font-size:1.1rem}
 .confirm-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 22px;max-width:360px;width:100%}
 .confirm-box p{margin-bottom:16px;line-height:1.45}
 .confirm-actions{display:flex;gap:10px;justify-content:flex-end}
+.kind-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.kind-choice{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:92px;padding:10px 8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);border-radius:10px;cursor:pointer;font-size:.78rem;font-weight:600}
+.kind-choice svg{display:block;width:28px;height:28px}
+.kind-choice:hover,.kind-choice.active{border-color:var(--accent);color:#fff}
+.rhythm-pattern{font-family:'SF Mono',Consolas,monospace;font-size:.75rem;color:var(--accent);letter-spacing:.04em;word-break:break-word}
 
 .slider-row{display:flex;align-items:center;gap:12px;margin-top:10px;flex-wrap:wrap}
 .slider-row label{font-size:.82rem;color:var(--text-dim);white-space:nowrap}
@@ -152,6 +159,10 @@ section h2 .icon{font-size:1.1rem}
 #io-status.error{color:var(--red)}
 #tap-import-input{display:none}
 #prompt-output{width:100%;min-height:140px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;color:var(--text-dim);font-family:'SF Mono',Consolas,monospace;font-size:.78rem;margin-top:12px;resize:vertical}
+#debug-io{display:none}
+#debug-io.show{display:block}
+#debug-io textarea{width:100%;min-height:88px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;color:var(--text);font-family:'SF Mono',Consolas,monospace;font-size:.78rem;margin:4px 0 12px;resize:vertical}
+#debug-input{min-height:140px}
 
 .setting-help{font-size:.75rem;color:var(--text-dim);margin:-4px 0 12px 0}
 .legend{margin-top:18px}
@@ -186,7 +197,7 @@ section h2 .icon{font-size:1.1rem}
       <img src="shibz-logo-b.jpg" alt="shibZ">
     </a>
     <div class="header-copy">
-      <h1>Lyrics <span>Creator</span></h1>
+      <h1>Lyrics <span>Creat<span class="egg-o" id="egg-o">o</span>r</span></h1>
       <p>Upload a track or listen on another device, tap syllables to the beat, then generate a prompt for your AI lyricist.</p>
       <p class="page-switch"><a href="lyrics-creator-auto.html">Switch to Precise Lyrics Creator</a></p>
     </div>
@@ -278,7 +289,8 @@ section h2 .icon{font-size:1.1rem}
       <div class="phrase-table-bar">
         <button type="button" class="btn btn-ghost" id="phrase-order-btn">Flip order</button>
         <span class="hint" id="phrase-order-label">Newest first</span>
-        <span class="hint">Right-click a dot to delete</span>
+        <span class="hint">Click a marker to set short/long · Right-click to delete</span>
+        <span class="hint rhythm-pattern" id="rhythm-pattern"></span>
       </div>
       <div id="phrase-table-wrap">
         <table id="phrase-table">
@@ -312,6 +324,14 @@ section h2 .icon{font-size:1.1rem}
     <textarea id="prompt-output" readonly placeholder="Generated prompt will appear here…"></textarea>
   </section>
 
+  <section id="debug-io">
+    <h2>Output and input</h2>
+    <div class="form-grid">
+      <div class="full"><label for="debug-output">Output</label><textarea id="debug-output" readonly placeholder="Pattern sent to the AI…"></textarea></div>
+      <div class="full"><label for="debug-input">Input</label><textarea id="debug-input" readonly placeholder="Unedited AI response…"></textarea></div>
+    </div>
+  </section>
+
   <div id="settings-backdrop" class="settings-backdrop"></div>
   <div id="settings-panel" class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
     <div class="settings-panel-head">
@@ -341,10 +361,13 @@ section h2 .icon{font-size:1.1rem}
           <h3>Key Bindings</h3>
           <table>
             <tr><td>Spacebar or Play</td><td>Play / Pause the track or the external-audio timer</td></tr>
-            <tr><td>Any other key or Tap syllable</td><td>Record a syllable (while playing)</td></tr>
+            <tr><td>Any other key or Tap syllable</td><td>Record an unmarked syllable (while playing)</td></tr>
+            <tr><td>; or :</td><td>Long syllable (oval) while playing, or retag the selected tap</td></tr>
+            <tr><td>' or "</td><td>Short syllable (diamond) while playing, or retag the selected tap</td></tr>
+            <tr><td>Click a tap marker</td><td>Choose unmarked, short (diamond), or long (oval)</td></tr>
             <tr><td>← / →</td><td>Seek backward / forward 2 seconds</td></tr>
             <tr><td>, / .</td><td>Select the previous / next syllable tap on the waveform and phrase diagram</td></tr>
-            <tr><td>Enter or New line</td><td>Next lyric line + tap on that line (can be turned off in Settings)</td></tr>
+            <tr><td>Enter or New line</td><td>Phrase boundary (X in the rhythm pattern). Optionally also taps, from Settings</td></tr>
             <tr><td>Backspace</td><td>Delete last tap · Pause · Seek to the previous tap on the waveform</td></tr>
             <tr><td>Start</td><td>Jump to the beginning of the waveform</td></tr>
             <tr><td>First tap</td><td>Jump to the first recorded syllable on the waveform</td></tr>
@@ -368,8 +391,31 @@ section h2 .icon{font-size:1.1rem}
     </div>
   </div>
 
+  <div id="kind-overlay" class="confirm-overlay">
+    <div class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="kind-text">
+      <p id="kind-text">Syllable duration</p>
+      <div class="kind-actions">
+        <button type="button" class="kind-choice" id="kind-short" data-kind="S" title="Short (diamond)">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><polygon points="10,2 18,10 10,18 2,10" fill="currentColor"/></svg>
+          Short
+        </button>
+        <button type="button" class="kind-choice" id="kind-long" data-kind="L" title="Long (oval)">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><ellipse cx="10" cy="10" rx="8" ry="4.2" fill="currentColor"/></svg>
+          Long
+        </button>
+        <button type="button" class="kind-choice" id="kind-unmarked" data-kind="" title="Unmarked">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="5" fill="currentColor"/></svg>
+          Unmarked
+        </button>
+      </div>
+      <div class="confirm-actions">
+        <button type="button" class="btn btn-ghost" id="kind-cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <footer style="text-align:center;padding:28px 0 8px;color:var(--text-dim);font-size:.78rem">
-    created by <a href="https://shibz.uk" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600;text-decoration:none">shibZ</a>
+    created by <a href="https://shibz.uk" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600;text-decoration:none">shibZ</a> Version:<span id="app-version">v9</span>
   </footer>
 </div>
 
@@ -390,11 +436,13 @@ const EXTERNAL_MIN_DURATION = 60;
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 16;
 const MP3_TXXX_DESC = 'shibZ.taps';
+const APP_VERSION = 'v9';
+const GITHUB_TAGS_URL = 'https://api.github.com/repos/shibz2/lyrics-creator/tags?per_page=40';
 const RESERVED_CODES = new Set([
   'Space','Backspace','Enter','NumpadEnter','Tab','Escape','CapsLock','ControlLeft','ControlRight',
   'ShiftLeft','ShiftRight','AltLeft','AltRight','MetaLeft','MetaRight','ContextMenu','Dead',
   'ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','PageUp','PageDown','Insert','Delete',
-  'Comma','Period','NumpadDecimal'
+  'Comma','Period','NumpadDecimal','Semicolon','Quote'
 ]);
 
 let audioCtx = null;
@@ -412,6 +460,7 @@ let startedAt = 0;
 let pausedAt = 0;
 let playbackRate = 1;
 let taps = [];
+let tapKinds = [];
 let manualBreaks = [];
 let gapThreshold = 1.5;
 let waveformData = null;
@@ -430,6 +479,8 @@ let replayFlashAt = 0;
 let replayFlashTimer = null;
 let lastHighlightKey = '';
 let selectedTap = null;
+let debugSentPattern = '';
+let debugRawReply = '';
 
 const uploadZone = document.getElementById('upload-zone');
 const uploadSection = document.getElementById('upload-section');
@@ -470,6 +521,10 @@ const tapImportInput = document.getElementById('tap-import-input');
 const ioStatus = document.getElementById('io-status');
 const copyConfirm = document.getElementById('copy-confirm');
 const promptOutput = document.getElementById('prompt-output');
+const debugIoSection = document.getElementById('debug-io');
+const debugOutputEl = document.getElementById('debug-output');
+const debugInputEl = document.getElementById('debug-input');
+const eggO = document.getElementById('egg-o');
 const waveformWrap = document.getElementById('waveform-wrap');
 const waveformInner = document.getElementById('waveform-inner');
 const playBtn = document.getElementById('play-btn');
@@ -490,6 +545,10 @@ const confirmOverlay = document.getElementById('confirm-overlay');
 const confirmText = document.getElementById('confirm-text');
 const confirmYes = document.getElementById('confirm-yes');
 const confirmNo = document.getElementById('confirm-no');
+const kindOverlay = document.getElementById('kind-overlay');
+const kindText = document.getElementById('kind-text');
+const kindCancel = document.getElementById('kind-cancel');
+const rhythmPatternEl = document.getElementById('rhythm-pattern');
 const settingsBtn = document.getElementById('settings-btn');
 const settingsPanel = document.getElementById('settings-panel');
 const settingsClose = document.getElementById('settings-close');
@@ -509,6 +568,128 @@ function shibZFmtShort(s){
   const m=Math.floor(s/60);
   const sec=Math.floor(s-m*60);
   return m+':'+String(sec).padStart(2,'0');
+}
+function shibZFillAppVersion(){
+  const el = document.getElementById('app-version');
+  if(!el) return;
+  el.textContent = APP_VERSION;
+  fetch(GITHUB_TAGS_URL)
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(tags => {
+      let best = '', bestN = -1;
+      (Array.isArray(tags) ? tags : []).forEach(t => {
+        const m = String(t && t.name || '').match(/^v(\d+(?:\.\d+)*)$/);
+        if(!m) return;
+        const n = m[1].split('.').reduce((acc, p) => acc * 1000 + Number(p), 0);
+        if(n > bestN){ bestN = n; best = t.name; }
+      });
+      if(best) el.textContent = best;
+    })
+    .catch(()=>{});
+}
+function shibZNormKind(k){
+  return (k==='L'||k==='S') ? k : '';
+}
+function shibZAlignTapKinds(raw, n){
+  const src = Array.isArray(raw) ? raw : [];
+  const out = [];
+  for(let i=0;i<n;i++) out.push(shibZNormKind(src[i]));
+  return out;
+}
+function shibZEnsureTapKinds(){
+  if(!Array.isArray(tapKinds)) tapKinds = [];
+  if(tapKinds.length===taps.length) return;
+  tapKinds = shibZAlignTapKinds(tapKinds, taps.length);
+}
+function shibZKindAtIndex(idx){
+  shibZEnsureTapKinds();
+  return (idx>=0 && idx<tapKinds.length) ? shibZNormKind(tapKinds[idx]) : '';
+}
+function shibZKindAtTap(tap){
+  return shibZKindAtIndex(shibZFindTapIndex(tap));
+}
+function shibZSetKindAtIndex(idx, kind){
+  shibZEnsureTapKinds();
+  if(idx<0 || idx>=taps.length) return false;
+  tapKinds[idx] = shibZNormKind(kind);
+  return true;
+}
+function shibZSetKindAtTap(tap, kind){
+  return shibZSetKindAtIndex(shibZFindTapIndex(tap), kind);
+}
+function shibZPushTap(time, kind){
+  taps.push(time);
+  shibZEnsureTapKinds();
+  if(tapKinds.length<taps.length) tapKinds.push(shibZNormKind(kind));
+  else tapKinds[taps.length-1] = shibZNormKind(kind);
+}
+function shibZPatternSlot(kind){
+  return kind==='L' ? 'L' : 'S';
+}
+function shibZRhythmPattern(){
+  const phrases = shibZDetectPhrases();
+  if(!phrases.length) return '';
+  return phrases.map(ph => ph.map(t => shibZPatternSlot(shibZKindAtTap(t))).join('')).join(' X ');
+}
+function shibZTapShapeSvg(x, y, kind, color, tapKey){
+  const k = shibZNormKind(kind);
+  const hit = `<circle class="tap-hit" data-tap="${tapKey}" data-kind="${k}" cx="${x.toFixed(1)}" cy="${y}" r="9" fill="transparent"/>`;
+  if(k==='S'){
+    const pts = `${x.toFixed(1)},${(y-5.2).toFixed(1)} ${(x+4.6).toFixed(1)},${y.toFixed(1)} ${x.toFixed(1)},${(y+5.2).toFixed(1)} ${(x-4.6).toFixed(1)},${y.toFixed(1)}`;
+    return `<polygon class="tap-dot kind-s" data-tap="${tapKey}" data-kind="S" points="${pts}" fill="${color}"/>`+hit;
+  }
+  if(k==='L'){
+    return `<ellipse class="tap-dot kind-l" data-tap="${tapKey}" data-kind="L" cx="${x.toFixed(1)}" cy="${y}" rx="7" ry="3.2" fill="${color}"/>`+hit;
+  }
+  return `<circle class="tap-dot kind-u" data-tap="${tapKey}" data-kind="" cx="${x.toFixed(1)}" cy="${y}" r="4" fill="${color}"/>`+hit;
+}
+function shibZDrawKindMark(x, y, kind, color, on){
+  const k = shibZNormKind(kind);
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.fillStyle = on ? '#fff' : color;
+  ctx.strokeStyle = on ? '#fff' : color;
+  ctx.lineWidth = on ? 2 : 1.2;
+  if(k==='S'){
+    ctx.beginPath();
+    ctx.moveTo(0,-6);
+    ctx.lineTo(5.2,0);
+    ctx.lineTo(0,6);
+    ctx.lineTo(-5.2,0);
+    ctx.closePath();
+    ctx.fill();
+    if(on){
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(0,-3.4);
+      ctx.lineTo(3,0);
+      ctx.lineTo(0,3.4);
+      ctx.lineTo(-3,0);
+      ctx.closePath();
+      ctx.fill();
+    }
+  } else if(k==='L'){
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 8, 3.4, 0, 0, Math.PI*2);
+    ctx.fill();
+    if(on){
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 5, 2, 0, 0, Math.PI*2);
+      ctx.fill();
+    }
+  } else {
+    ctx.beginPath();
+    ctx.arc(0, 0, on ? 5.5 : 4, 0, Math.PI*2);
+    ctx.fill();
+    if(on){
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(0, 0, 3.2, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+  ctx.restore();
 }
 function shibZClockTime(){
   if(!shibZHasTimeline()) return 0;
@@ -731,6 +912,7 @@ function shibZSaveSession(){
       externalMode,
       externalDuration,
       taps,
+      tapKinds,
       manualBreaks,
       gapThreshold,
       playbackRate,
@@ -746,6 +928,7 @@ function shibZSaveSession(){
 function shibZApplySession(session){
   if(!session) return;
   taps = Array.isArray(session.taps) ? session.taps.slice() : [];
+  tapKinds = shibZAlignTapKinds(session.tapKinds, taps.length);
   manualBreaks = Array.isArray(session.manualBreaks) ? session.manualBreaks.slice() : [];
   if(typeof session.gapThreshold === 'number'){
     gapThreshold = session.gapThreshold;
@@ -789,12 +972,13 @@ function shibZSafeFileSlug(name){
 function shibZBuildExport(){
   return {
     app: 'shibZ-lyrics-creator',
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     fileName: currentFileName || '',
     externalMode,
     duration: audioBuffer ? audioBuffer.duration : (externalMode ? shibZDuration() : null),
     taps: taps.slice(),
+    tapKinds: shibZAlignTapKinds(tapKinds, taps.length),
     manualBreaks: manualBreaks.slice(),
     gapThreshold,
     playbackRate,
@@ -1042,14 +1226,24 @@ function shibZNormalizeImported(data){
   if(!data || typeof data !== 'object') return null;
   const rawTaps = Array.isArray(data.taps) ? data.taps : null;
   if(!rawTaps) return null;
-  const nextTaps = rawTaps.map(Number).filter(n => isFinite(n) && n>=0);
-  const nextBreaks = Array.isArray(data.manualBreaks) ? data.manualBreaks.map(Number).filter(n => isFinite(n) && n>=0) : [];
+  const rawKinds = Array.isArray(data.tapKinds) ? data.tapKinds : [];
+  const dur = audioBuffer ? audioBuffer.duration + 0.02 : null;
+  const nextTaps = [];
+  const nextKinds = [];
+  rawTaps.forEach((raw, i)=>{
+    const n = Number(raw);
+    if(!isFinite(n) || n<0) return;
+    if(dur!=null && n>dur) return;
+    nextTaps.push(n);
+    nextKinds.push(shibZNormKind(rawKinds[i]));
+  });
+  const nextBreaks = Array.isArray(data.manualBreaks) ? data.manualBreaks.map(Number).filter(n => isFinite(n) && n>=0 && (dur==null || n<=dur)) : [];
   if(audioBuffer){
-    const dur = audioBuffer.duration + 0.02;
     return {
       fileName: typeof data.fileName === 'string' ? data.fileName : '',
-      taps: nextTaps.filter(t => t<=dur),
-      manualBreaks: nextBreaks.filter(t => t<=dur),
+      taps: nextTaps,
+      tapKinds: nextKinds,
+      manualBreaks: nextBreaks,
       gapThreshold: typeof data.gapThreshold === 'number' ? data.gapThreshold : gapThreshold,
       playbackRate: typeof data.playbackRate === 'number' ? data.playbackRate : playbackRate,
       deviceSkewMs: typeof data.deviceSkewMs === 'number' ? data.deviceSkewMs : deviceSkewMs,
@@ -1066,6 +1260,7 @@ function shibZNormalizeImported(data){
   return {
     fileName: typeof data.fileName === 'string' ? data.fileName : '',
     taps: nextTaps,
+    tapKinds: nextKinds,
     manualBreaks: nextBreaks,
     gapThreshold: typeof data.gapThreshold === 'number' ? data.gapThreshold : 1.5,
     playbackRate: typeof data.playbackRate === 'number' ? data.playbackRate : 1,
@@ -1083,6 +1278,7 @@ function shibZNormalizeImported(data){
 
 function shibZApplyImportedTaps(session){
   taps = session.taps;
+  tapKinds = shibZAlignTapKinds(session.tapKinds, taps.length);
   manualBreaks = session.manualBreaks;
   selectedTap = null;
   if(typeof session.gapThreshold === 'number'){
@@ -1233,6 +1429,7 @@ async function shibZLoadFile(file){
     shibZApplySession(session);
   } else {
     taps = [];
+    tapKinds = [];
     manualBreaks = [];
   }
 
@@ -1519,14 +1716,13 @@ function shibZDetectPhrases(){
 }
 
 function shibZVisualPhrase(ph, color){
-  const W=220, H=22, pad=8, r=4;
+  const W=220, H=22, pad=8;
   const start=ph[0], end=ph[ph.length-1];
   const span=Math.max(end-start, 0.08);
   const xs=ph.map(t => ph.length===1 ? W/2 : pad+((t-start)/span)*(W-pad*2));
   let svg=`<line x1="${pad}" y1="${H/2}" x2="${W-pad}" y2="${H/2}" stroke="${color}" stroke-opacity="0.28" stroke-width="2" stroke-linecap="round"/>`;
   for(let i=1;i<xs.length;i++){
     const gap=ph[i]-ph[i-1];
-    const mid=(xs[i-1]+xs[i])/2;
     const ticks=Math.min(6, Math.max(1, Math.round(gap/0.18)));
     for(let k=1;k<=ticks;k++){
       const x=xs[i-1]+(xs[i]-xs[i-1])*(k/(ticks+1));
@@ -1534,8 +1730,8 @@ function shibZVisualPhrase(ph, color){
     }
   }
   xs.forEach((x, idx)=>{
-    svg+=`<circle class="tap-dot" data-tap="${Number(ph[idx]).toFixed(6)}" cx="${x.toFixed(1)}" cy="${H/2}" r="${r}" fill="${color}"/>`;
-    svg+=`<circle class="tap-hit" data-tap="${Number(ph[idx]).toFixed(6)}" cx="${x.toFixed(1)}" cy="${H/2}" r="9" fill="transparent"/>`;
+    const tapKey = Number(ph[idx]).toFixed(6);
+    svg+=shibZTapShapeSvg(x, H/2, shibZKindAtTap(ph[idx]), color, tapKey);
   });
   const gaps=ph.slice(1).map((t,i)=>(t-ph[i]).toFixed(2)+'s');
   const label=ph.length===1
@@ -1558,6 +1754,8 @@ function shibZUpdatePhraseTable(){
   replayBtn.disabled = taps.length===0;
   if(gotoFirstTapBtn) gotoFirstTapBtn.disabled = taps.length===0;
   if(exportBtn) exportBtn.disabled = taps.length===0;
+  if(rhythmPatternEl) rhythmPatternEl.textContent = shibZRhythmPattern();
+  shibZSyncDebugIo();
   shibZSyncExportMp3Btn();
   shibZSyncPhraseOrderBtn();
   if(phrases.length===0){
@@ -1664,6 +1862,9 @@ function shibZRemoveTapAt(tap){
   const idx=shibZFindTapIndex(tap);
   if(idx<0) return false;
   const removed=taps.splice(idx,1)[0];
+  shibZEnsureTapKinds();
+  tapKinds.splice(idx,1);
+  if(selectedTap!=null && Math.abs(selectedTap-removed)<0.0008) selectedTap=null;
   manualBreaks = manualBreaks.filter(mb => Math.abs(mb-removed)>0.0008);
   shibZUpdatePhraseTable();
   shibZSaveSession();
@@ -1675,6 +1876,50 @@ function shibZCloseConfirm(){
   confirmOverlay.classList.remove('show');
   confirmOverlay.removeAttribute('data-tap');
   confirmOverlay.removeAttribute('data-action');
+}
+
+function shibZKindLabel(kind){
+  const k = shibZNormKind(kind);
+  if(k==='S') return 'short (diamond)';
+  if(k==='L') return 'long (oval)';
+  return 'unmarked';
+}
+
+function shibZCloseKindPicker(){
+  if(!kindOverlay) return;
+  kindOverlay.classList.remove('show');
+  kindOverlay.removeAttribute('data-tap');
+}
+
+function shibZOpenKindPicker(tap){
+  if(!kindOverlay || !isFinite(tap) || shibZFindTapIndex(tap)<0) return;
+  shibZCloseConfirm();
+  const kind = shibZKindAtTap(tap);
+  if(kindText) kindText.textContent = 'Syllable at '+shibZFmtTime(tap)+' · currently '+shibZKindLabel(kind);
+  kindOverlay.querySelectorAll('.kind-choice').forEach(btn=>{
+    btn.classList.toggle('active', shibZNormKind(btn.getAttribute('data-kind')) === kind);
+  });
+  kindOverlay.setAttribute('data-tap', String(tap));
+  kindOverlay.classList.add('show');
+}
+
+function shibZApplyKindChoice(kind){
+  const tap = parseFloat(kindOverlay?.getAttribute('data-tap'));
+  shibZCloseKindPicker();
+  if(!isFinite(tap) || !shibZSetKindAtTap(tap, kind)) return;
+  shibZUpdatePhraseTable();
+  shibZSaveSession();
+}
+
+function shibZRetagSelected(kind){
+  if(selectedTap==null) return false;
+  const idx = shibZFindTapIndex(selectedTap);
+  if(idx<0) return false;
+  const next = shibZKindAtIndex(idx)===kind ? '' : kind;
+  shibZSetKindAtIndex(idx, next);
+  shibZUpdatePhraseTable();
+  shibZSaveSession();
+  return true;
 }
 
 function shibZOpenSettings(){
@@ -1700,6 +1945,7 @@ function shibZOpenConfirm(action, message){
     if(window.confirm(message)) shibZHandleConfirmAction(action);
     return;
   }
+  shibZCloseKindPicker();
   confirmText.textContent = message;
   confirmOverlay.setAttribute('data-action', action);
   confirmOverlay.removeAttribute('data-tap');
@@ -1713,6 +1959,7 @@ function shibZConfirmDeleteTap(tap){
     if(window.confirm(message)) shibZRemoveTapAt(tap);
     return;
   }
+  shibZCloseKindPicker();
   confirmText.textContent = message;
   confirmOverlay.setAttribute('data-action', 'delete-tap');
   confirmOverlay.setAttribute('data-tap', String(tap));
@@ -1725,8 +1972,11 @@ function shibZConfirmClearAndStartOver(){
 
 function shibZClearAndStartOver(){
   taps = [];
+  tapKinds = [];
   manualBreaks = [];
   selectedTap = null;
+  debugSentPattern = '';
+  debugRawReply = '';
   if(externalMode) externalDuration = EXTERNAL_MIN_DURATION;
   shibZGotoWaveformStart();
   if(shibZHasTimeline()) shibZLayoutWaveform();
@@ -1777,9 +2027,9 @@ function shibZEnterAsTapOnNewLine(){
       manualBreaks.push(breakAt);
       manualBreaks.sort((a,b)=>a-b);
     }
-    taps.push(Math.max(tapTime, breakAt + 0.0001));
+    shibZPushTap(Math.max(tapTime, breakAt + 0.0001), '');
   } else {
-    taps.push(tapTime);
+    shibZPushTap(tapTime, '');
   }
   shibZSpawnRipple();
   rewindBanner.style.display='none';
@@ -1843,16 +2093,7 @@ function shibZDrawFrame(){
     ctx.lineTo(x,H-8);
     ctx.stroke();
     ctx.shadowBlur=0;
-    if(on){
-      ctx.fillStyle='#fff';
-      ctx.beginPath();
-      ctx.arc(x,H/2,5.5,0,Math.PI*2);
-      ctx.fill();
-      ctx.fillStyle=color;
-      ctx.beginPath();
-      ctx.arc(x,H/2,3.2,0,Math.PI*2);
-      ctx.fill();
-    }
+    shibZDrawKindMark(x, H/2, shibZKindAtTap(tap), color, on);
   });
 
   manualBreaks.forEach(mb=>{
@@ -1969,6 +2210,12 @@ canvas.addEventListener('click', e=>{
   const dur=shibZDuration();
   const t= (x/rect.width)*dur;
 
+  const nearTap=shibZNearestTapAtClientX(e.clientX);
+  if(nearTap!=null){
+    shibZOpenKindPicker(nearTap);
+    return;
+  }
+
   for(let i=0;i<manualBreaks.length;i++){
     const bx=(manualBreaks[i]/dur)*rect.width;
     if(Math.abs(x-bx)<6){
@@ -2019,7 +2266,7 @@ canvas.addEventListener('mousemove', e=>{
     for(let p=0;p<phrases.length;p++){
       if(phrases[p].includes(sorted[closest])){phraseIdx=p+1;break;}
     }
-    tooltip.textContent=`Syllable ${closest+1} · ${shibZFmtTime(sorted[closest])} · Phrase ${phraseIdx} · Right-click to delete`;
+    tooltip.textContent=`Syllable ${closest+1} · ${shibZFmtTime(sorted[closest])} · ${shibZKindLabel(shibZKindAtTap(sorted[closest]))} · Phrase ${phraseIdx} · Click to set short/long · Right-click to delete`;
     tooltip.style.display='block';
     tooltip.style.left=(tapPx)+'px';
     tooltip.style.top='-28px';
@@ -2064,6 +2311,12 @@ canvas.addEventListener('contextmenu', e=>{
 });
 
 if(phraseTbody){
+  phraseTbody.addEventListener('click', e=>{
+    const tap=shibZTapFromTableEvent(e);
+    if(tap==null) return;
+    e.preventDefault();
+    shibZOpenKindPicker(tap);
+  });
   phraseTbody.addEventListener('contextmenu', e=>{
     const tap=shibZTapFromTableEvent(e);
     if(tap==null) return;
@@ -2086,6 +2339,17 @@ if(confirmOverlay){
     if(e.target===confirmOverlay) shibZCloseConfirm();
   });
 }
+if(kindCancel) kindCancel.addEventListener('click', shibZCloseKindPicker);
+if(kindOverlay){
+  kindOverlay.addEventListener('click', e=>{
+    if(e.target===kindOverlay) shibZCloseKindPicker();
+    const choice = e.target.closest?.('.kind-choice');
+    if(choice){
+      e.preventDefault();
+      shibZApplyKindChoice(choice.getAttribute('data-kind') || '');
+    }
+  });
+}
 if(settingsBtn) settingsBtn.addEventListener('click', shibZToggleSettings);
 if(settingsClose) settingsClose.addEventListener('click', shibZCloseSettings);
 if(settingsBackdrop) settingsBackdrop.addEventListener('click', shibZCloseSettings);
@@ -2105,9 +2369,9 @@ function shibZSpawnRipple(atTime){
   setTimeout(()=>el.remove(),500);
 }
 
-function shibZRecordSyllableTap(){
+function shibZRecordSyllableTap(kind){
   if(!isPlaying || !shibZHasTimeline() || isReplaying) return false;
-  taps.push(shibZRecordedTapTime());
+  shibZPushTap(shibZRecordedTapTime(), kind);
   shibZSpawnRipple();
   rewindBanner.style.display='none';
   shibZUpdatePhraseTable();
@@ -2128,6 +2392,13 @@ function shibZIsReservedTapKey(e){
 }
 
 document.addEventListener('keydown', e=>{
+  if(kindOverlay?.classList.contains('show')){
+    if(e.code==='Escape'){
+      e.preventDefault();
+      shibZCloseKindPicker();
+    }
+    return;
+  }
   if(confirmOverlay?.classList.contains('show')){
     if(e.code==='Escape'){
       e.preventDefault();
@@ -2184,10 +2455,25 @@ document.addEventListener('keydown', e=>{
     return;
   }
 
+  if(e.code==='Semicolon' || e.code==='Quote'){
+    e.preventDefault();
+    if(e.repeat) return;
+    const kind = e.code==='Semicolon' ? 'L' : 'S';
+    if(isPlaying && !isReplaying && shibZHasTimeline()){
+      shibZRecordSyllableTap(kind);
+      return;
+    }
+    if(!isPlaying) shibZRetagSelected(kind);
+    return;
+  }
+
   if(e.code==='Backspace'){
     e.preventDefault();
     if(e.repeat||taps.length===0) return;
     const removed=taps.pop();
+    shibZEnsureTapKinds();
+    tapKinds.pop();
+    if(selectedTap!=null && Math.abs(selectedTap-removed)<0.0008) selectedTap=null;
     manualBreaks = manualBreaks.filter(mb => mb < removed);
     shibZPause();
     const previousTap = taps.length ? Math.max(...taps) : 0;
@@ -2218,18 +2504,51 @@ function shibZBuildPrompt(){
   const lang=(langInput.value||'').trim()||DEFAULT_LANG;
   const style=(styleInput.value||'').trim()||DEFAULT_STYLE;
   const extra=(extraInput.value||'').trim();
+  const pattern=shibZRhythmPattern();
 
-  let lines='';
-  phrases.forEach((ph,i)=>{
-    lines+=`Line ${i+1}: ${ph.length} syllable${ph.length!==1?'s':''}\n`;
-  });
-
-  let prompt=`You are a lyricist. Write song lyrics in ${lang} language`;
-  if(style) prompt+=` matching ${style} style/mood`;
-  prompt+=`, matching the EXACT syllable structure below.\n\n`;
-  prompt+=`Syllable structure:\n${lines}`;
-  prompt+=`\nRules:\n- Match the syllable count of each line EXACTLY.\n- Separate every syllable with a vertical bar |. Example for 5 syllables: He|llo|my|dar|ling\n- One lyrics line per phrase, in the same order as the structure above.\n- The number of |-separated tokens on each line must equal that line's syllable count.\n- Maintain natural rhythm and rhyme.\n- Output ONLY the lyrics, nothing else. No titles, numbering, comments, or markdown.\n\nOutput format:\n<<<LYRICS\nHe|llo|there\nHow|are|you\n>>>\nWrite nothing before <<<LYRICS or after >>>.\n`;
-  if(extra) prompt+=`\nAdditional instructions:\n${extra}\n`;
+  let prompt=`You are an expert ${lang} lyricist and ${lang} prosody editor.\n\n`;
+  prompt+=`Your task is to write natural, singable ${lang} lyrics that fit an existing melody.\n`;
+  prompt+=`The style/mood/theme of the lyrics should be ${style}\n`;
+  prompt+=`The melody is represented as a sequence of syllable-duration slots.\n\n`;
+  prompt+=`Duration notation:\n\n`;
+  prompt+=`S = short syllable, duration 1 unit\n`;
+  prompt+=`L = long syllable, duration 2 units\n`;
+  prompt+=`Each X indicates a phrase boundary.\n`;
+  prompt+=`Every generated lyric phrase MUST match the supplied rhythmic pattern exactly.\n`;
+  prompt+=`Do not add or remove syllables.\n`;
+  prompt+=`Do not merge two required syllables into one.\n`;
+  prompt+=`Do not split one required syllable into multiple syllables.\n`;
+  prompt+=`A long slot must receive a syllable that can naturally be sustained for the required duration.\n`;
+  prompt+=`A short slot should normally receive a naturally short, easily articulated syllable.\n`;
+  prompt+=`Phrase boundaries must be respected.\n\n`;
+  prompt+=`IMPORTANT:\n`;
+  prompt+=`Musical duration and ${lang} linguistic vowel length are different concepts.\n\n`;
+  prompt+=`A long musical slot does NOT necessarily require a ${lang} long-vowel syllable.\n`;
+  prompt+=`For example, a short-vowel syllable may be sung on a sustained note when musically appropriate.\n\n`;
+  prompt+=`Prioritize, in this order:\n\n`;
+  prompt+=`Exact rhythmic/syllable-slot fit\n`;
+  prompt+=`Natural ${lang} pronunciation\n`;
+  prompt+=`Singability\n`;
+  prompt+=`Correct grammar\n`;
+  prompt+=`Natural word boundaries\n`;
+  prompt+=`Meaning and poetic quality\n`;
+  prompt+=`Rhyme/alliteration where appropriate\n\n`;
+  prompt+=`Avoid:\n\n`;
+  prompt+=`unnatural ${lang} created only to satisfy the meter\n`;
+  prompt+=`obscure words merely to force syllable counts\n`;
+  prompt+=`awkward consonant clusters at fast/short notes\n`;
+  prompt+=`placing difficult consonant combinations on rapid syllables\n`;
+  prompt+=`excessive use of filler words\n`;
+  prompt+=`treating written characters as syllables\n\n`;
+  prompt+=`For each line, internally verify:\n\n`;
+  prompt+=`Number of syllables\n`;
+  prompt+=`Duration assigned to every syllable\n`;
+  prompt+=`Whether each syllable can be naturally sung at its assigned duration\n`;
+  prompt+=`Whether the ${lang} sounds natural when spoken aloud\n`;
+  prompt+=`Whether the phrase boundary makes musical sense\n\n`;
+  prompt+=`Return ONLY valid lyrics in ${lang}. Separate each syllable by a "|" and copy "X" as is from source.\n`;
+  prompt+=`Here is the rhythmic pattern: ${pattern}`;
+  if(extra) prompt+=`\n\nAdditional instructions:\n${extra}`;
   return { ok:true, text:prompt };
 }
 
@@ -2238,10 +2557,25 @@ function shibZShowCopied(){
   setTimeout(()=>{copyConfirm.style.display='none'},2000);
 }
 
+function shibZSyncDebugIo(){
+  if(debugOutputEl) debugOutputEl.value = debugSentPattern || shibZRhythmPattern();
+  if(debugInputEl) debugInputEl.value = debugRawReply;
+}
+
+function shibZToggleDebugIo(){
+  if(!debugIoSection) return;
+  const on = !debugIoSection.classList.contains('show');
+  debugIoSection.classList.toggle('show', on);
+  shibZSyncDebugIo();
+  if(on) debugIoSection.scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+
 function shibZProcess(opts){
   const result = shibZBuildPrompt();
   promptOutput.value = result.text;
   promptSection.style.display='block';
+  if(result.ok) debugSentPattern = shibZRhythmPattern();
+  shibZSyncDebugIo();
   if(opts && opts.scroll !== false){
     promptSection.scrollIntoView({ behavior:'smooth', block:'start' });
   }
@@ -2351,6 +2685,12 @@ if(tapLineBtn){
 }
 
 shibZApplyPrefs();
+shibZFillAppVersion();
+if(eggO) eggO.addEventListener('click', e=>{
+  e.preventDefault();
+  e.stopPropagation();
+  shibZToggleDebugIo();
+});
 const saved = shibZReadSession();
 if(saved && typeof saved.playbackRate === 'number'){
   shibZSetSpeed(saved.playbackRate, false);

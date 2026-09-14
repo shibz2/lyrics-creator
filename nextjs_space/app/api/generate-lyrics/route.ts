@@ -4,7 +4,7 @@ export const runtime = 'nodejs'
 
 const HARD_DEFAULT_MODEL = 'gemini-3.5-flash-lite'
 const SYSTEM_PROMPT =
-  'You are a lyricist. Follow the user prompt exactly. Output ONLY the lyrics between <<<LYRICS and >>>. No titles, numbering, comments, or markdown.'
+  'You are a lyricist. Follow the user prompt exactly. Output ONLY the lyrics. Separate syllables with |. Copy each X phrase boundary from the rhythmic pattern. No titles, numbering, comments, or markdown.'
 
 type Body = {
   prompt?: unknown
