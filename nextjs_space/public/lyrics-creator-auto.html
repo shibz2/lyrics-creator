@@ -93,14 +93,20 @@ section h2 .icon{font-size:1.1rem}
 #phrase-table th{text-align:left;color:var(--text-dim);font-weight:500;padding:6px 10px;border-bottom:1px solid var(--border)}
 #phrase-table td{padding:6px 10px;border-bottom:1px solid var(--border)}
 #phrase-table .color-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+#phrase-table col.col-phrase{width:4.4rem}
+#phrase-table col.col-count{width:5rem}
+#phrase-table col.col-visual{width:auto}
+#phrase-table col.col-time{width:4.8rem}
+#phrase-table col.col-dur{width:4.2rem}
 #phrase-table .col-phrase{width:4.4rem}
 #phrase-table .col-count{width:5rem}
 #phrase-table .col-visual,#phrase-table td.visual-cell{width:auto;min-width:12rem;vertical-align:middle;overflow:visible}
 #phrase-table th.col-visual{text-align:center}
 #phrase-table .col-time,#phrase-table td.time-cell{width:4.8rem;padding-left:4px;padding-right:4px;white-space:nowrap;font-variant-numeric:tabular-nums;font-size:.72rem}
 #phrase-table .col-dur,#phrase-table td.dur-cell{width:4.2rem;padding-left:4px;padding-right:4px;white-space:nowrap;font-variant-numeric:tabular-nums;font-size:.72rem}
-#phrase-table .phrase-visual{display:block;width:100%;height:22px;color:var(--text);overflow:visible}
-#phrase-table .phrase-visual.has-lyrics{width:100%;height:40px}
+#phrase-table .visual-frame{display:block;width:100%;min-width:0;line-height:0}
+#phrase-table .phrase-visual{display:block;width:100%;height:auto;aspect-ratio:320/40;color:var(--text);overflow:visible}
+#phrase-table .phrase-visual.has-lyrics{width:100%}
 #phrase-table .phrase-visual.mismatch text{fill:var(--orange)}
 #phrase-table .tap-dot,#phrase-table .tap-hit{cursor:context-menu}
 #phrase-table .tap-dot.played{filter:brightness(1.35)}
@@ -178,11 +184,11 @@ section h2 .icon{font-size:1.1rem}
   .settings-panel{top:64px;right:12px}
   .site-logo img{height:36px;width:36px}
   #phrase-table{min-width:32rem}
-  #phrase-table .col-phrase{width:3rem}
-  #phrase-table .col-count{width:3.6rem}
+  #phrase-table col.col-phrase,#phrase-table .col-phrase{width:3rem}
+  #phrase-table col.col-count,#phrase-table .col-count{width:3.6rem}
   #phrase-table .col-visual,#phrase-table td.visual-cell{min-width:10rem}
-  #phrase-table .col-time,#phrase-table td.time-cell{width:4.1rem;padding-left:2px;padding-right:2px}
-  #phrase-table .col-dur,#phrase-table td.dur-cell{width:2.8rem;padding-left:2px;padding-right:2px}
+  #phrase-table col.col-time,#phrase-table .col-time,#phrase-table td.time-cell{width:4.1rem;padding-left:2px;padding-right:2px}
+  #phrase-table col.col-dur,#phrase-table .col-dur,#phrase-table td.dur-cell{width:2.8rem;padding-left:2px;padding-right:2px}
   .tap-pad{min-height:84px;font-size:1.12rem}
   .tap-pad-row{position:sticky;bottom:8px;z-index:5}
 }
@@ -290,6 +296,14 @@ section h2 .icon{font-size:1.1rem}
       </div>
       <div id="phrase-table-wrap">
         <table id="phrase-table">
+          <colgroup>
+            <col class="col-phrase">
+            <col class="col-count">
+            <col class="col-visual">
+            <col class="col-time">
+            <col class="col-time">
+            <col class="col-dur">
+          </colgroup>
           <thead><tr><th class="col-phrase">Phrase</th><th class="col-count">Syllables</th><th class="col-visual">Visual phrase</th><th class="col-time">Start</th><th class="col-time">End</th><th class="col-dur">Duration</th></tr></thead>
           <tbody id="phrase-tbody"></tbody>
         </table>
@@ -357,7 +371,7 @@ section h2 .icon{font-size:1.1rem}
             <tr><td>First tap</td><td>Jump to the first recorded syllable on the waveform</td></tr>
             <tr><td>Replay taps</td><td>Play from the first tap and flash each recorded syllable (no file needed in external mode)</td></tr>
             <tr><td>Clear &amp; Start Over</td><td>After Yes, clear lyrics and taps and return to the start of the waveform</td></tr>
-            <tr><td>Export MP3 with metadata</td><td>Save a copy of the loaded MP3 with tap data in an ID3v2 tag (MP3 only)</td></tr>
+            <tr><td>Export MP3 with metadata</td><td>Save a copy of the loaded MP3 with tap data in an ID3v2 tag (MP3 only). Loading that file restores the taps.</td></tr>
             <tr><td>Right-click / long-press a tap</td><td>Delete that syllable on the waveform or phrase diagram (asks Yes / No)</td></tr>
             <tr><td>Wheel on waveform</td><td>Zoom in / out · Shift+wheel scrolls sideways</td></tr>
           </table>
@@ -876,25 +890,89 @@ function shibZKeepMp3Original(file, bytes){
   if(!shibZIsMp3Bytes(bytes)) return null;
   return bytes;
 }
-function shibZTxxxDescription(data){
-  if(!data || !data.length) return '';
+function shibZTxxxDecode(enc, bytes){
+  try {
+    if(enc===3) return new TextDecoder('utf-8').decode(bytes);
+    if(enc===0) return new TextDecoder('latin1').decode(bytes);
+    if(enc===1) return new TextDecoder('utf-16').decode(bytes);
+    if(enc===2) return new TextDecoder('utf-16be').decode(bytes);
+  } catch(e){}
+  return '';
+}
+function shibZTxxxParts(data){
+  if(!data || !data.length) return { desc:'', value:'' };
   const enc = data[0];
   if(enc===0 || enc===3){
     let end = 1;
     while(end<data.length && data[end]!==0) end++;
-    try { return new TextDecoder(enc===3?'utf-8':'latin1').decode(data.subarray(1,end)); }
-    catch(e){ return ''; }
+    const desc = shibZTxxxDecode(enc, data.subarray(1,end)).replace(/\0+$/,'');
+    let start = Math.min(data.length, end+1);
+    let stop = data.length;
+    while(stop>start && data[stop-1]===0) stop--;
+    const value = shibZTxxxDecode(enc, data.subarray(start, stop)).replace(/\0+$/,'');
+    return { desc, value };
   }
   if(enc===1 || enc===2){
     let end = 1;
     while(end+1<data.length && !(data[end]===0 && data[end+1]===0)) end += 2;
-    try { return new TextDecoder('utf-16'+(enc===1?'':'be')).decode(data.subarray(1,end)); }
-    catch(e){ return ''; }
+    const desc = shibZTxxxDecode(enc, data.subarray(1,end)).replace(/\0+$/,'');
+    let start = Math.min(data.length, end+2);
+    let stop = data.length;
+    while(stop-start>=2 && data[stop-2]===0 && data[stop-1]===0) stop -= 2;
+    const value = shibZTxxxDecode(enc, data.subarray(start, stop)).replace(/\0+$/,'');
+    return { desc, value };
   }
-  return '';
+  return { desc:'', value:'' };
+}
+function shibZTxxxDescription(data){
+  return shibZTxxxParts(data).desc;
 }
 function shibZIsOurMetadataFrame(frame){
   return frame && frame.id==='TXXX' && shibZTxxxDescription(frame.data)===MP3_TXXX_DESC;
+}
+function shibZReadMp3TapPayload(bytes){
+  if(!bytes || bytes.length<10) return null;
+  const parsed = shibZParseId3(bytes);
+  for(const frame of parsed.frames){
+    if(frame.id!=='TXXX') continue;
+    const parts = shibZTxxxParts(frame.data);
+    if(parts.desc!==MP3_TXXX_DESC) continue;
+    try {
+      const data = JSON.parse(parts.value);
+      if(data && typeof data==='object' && Array.isArray(data.taps)) return data;
+    } catch(e){}
+  }
+  return null;
+}
+function shibZApplyEmbeddedTapData(data){
+  const session = shibZNormalizeImported(data);
+  if(!session) return false;
+  if(typeof session.lang === 'string' && session.lang.trim() && langInput) langInput.value = session.lang;
+  if(typeof session.style === 'string' && session.style.trim() && styleInput) styleInput.value = session.style;
+  if(typeof session.deviceSkewEnabled === 'boolean'){
+    shibZSetDeviceSkewEnabled(session.deviceSkewEnabled, false);
+  }
+  if(typeof session.deviceSkewMs === 'number' || typeof session.reactionSkewMs === 'number'){
+    shibZSetSkew(
+      typeof session.deviceSkewMs === 'number' ? session.deviceSkewMs : deviceSkewMs,
+      typeof session.reactionSkewMs === 'number' ? session.reactionSkewMs : reactionSkewMs,
+      false
+    );
+  }
+  shibZApplyImportedTaps(session);
+  if(lyricsOutput){
+    if(typeof data.lyrics === 'string' && data.lyrics.trim()){
+      shibZStoreGenerated(data.lyrics);
+    } else {
+      lyricsRaw = '';
+      lyricsGeneratedOnce = false;
+      lyricsOutput.value = '';
+      try { localStorage.removeItem(GENERATED_KEY); } catch(e){}
+      shibZSetGenerateStatus('');
+    }
+  }
+  shibZSavePrefs();
+  return true;
 }
 function shibZParseId3(u){
   if(!u || u.length<10 || u[0]!==0x49 || u[1]!==0x44 || u[2]!==0x33){
@@ -1176,6 +1254,13 @@ async function shibZLoadFile(file){
   externalMode = false;
   currentFileName = file.name;
   fileNameEl.textContent = file.name;
+
+  const embedded = shibZReadMp3TapPayload(bytes);
+  if(embedded && shibZApplyEmbeddedTapData(embedded)){
+    shibZShowStudio();
+    shibZIoStatus('Loaded '+taps.length+' tap'+(taps.length===1?'':'s')+' from MP3 metadata.');
+    return;
+  }
 
   const session = shibZReadSession();
   if(session && session.fileName === file.name){
@@ -1535,11 +1620,11 @@ function shibZSyncPhraseOrderBtn(){
 
 function shibZVisualPhrase(ph, color, syllables){
   const hasLyrics = Array.isArray(syllables) && syllables.some(s=>s);
-  const W = hasLyrics ? 320 : 220;
-  const H = hasLyrics ? 40 : 22;
+  const W = 320;
+  const H = 40;
   const pad = 10;
   const r = 4;
-  const lineY = hasLyrics ? 10 : H/2;
+  const lineY = 10;
   const start=ph[0], end=ph[ph.length-1];
   const span=Math.max(end-start, 0.08);
   const xs=ph.map(t => ph.length===1 ? W/2 : pad+((t-start)/span)*(W-pad*2));
@@ -1568,7 +1653,7 @@ function shibZVisualPhrase(ph, color, syllables){
   const fullLabel = lyricLine ? label+' — '+lyricLine : label;
   const mismatch = hasLyrics && syllables.length !== ph.length;
   const cls = 'phrase-visual'+(hasLyrics?' has-lyrics':'')+(mismatch?' mismatch':'');
-  return `<svg class="${cls}" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${shibZEscXml(fullLabel)}"><title>${shibZEscXml(fullLabel)}</title>${svg}</svg>`;
+  return `<div class="visual-frame"><svg class="${cls}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${shibZEscXml(fullLabel)}"><title>${shibZEscXml(fullLabel)}</title>${svg}</svg></div>`;
 }
 
 function shibZUpdatePhraseTable(){
