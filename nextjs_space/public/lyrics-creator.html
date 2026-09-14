@@ -123,6 +123,8 @@ section h2 .icon{font-size:1.1rem}
 .btn-process:hover{box-shadow:0 0 18px rgba(255,108,168,.4)}
 .btn-replay{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
 .btn-replay:hover,.btn-replay.active{border-color:var(--accent);color:#fff;background:var(--accent)}
+.btn-amber{background:var(--orange);color:#111;border:1px solid var(--orange)}
+.btn-amber:hover{box-shadow:0 0 18px rgba(255,170,68,.45)}
 .btn-ghost{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
 .btn-ghost:hover{border-color:var(--accent)}
 .btn-toggle{min-width:92px;padding:6px 12px;font-size:.78rem}
@@ -201,7 +203,10 @@ section h2 .icon{font-size:1.1rem}
     <h2><span class="icon">🎚️</span> Player &amp; Tap Mode</h2>
     <div class="player-bar">
       <button type="button" class="btn btn-accent" id="play-btn">Play</button>
+      <button type="button" class="btn btn-ghost" id="goto-start-btn" title="Go to the start of the waveform">Start</button>
+      <button type="button" class="btn btn-ghost" id="goto-first-tap-btn" title="Go to the first tap on the waveform" disabled>First tap</button>
       <button type="button" class="btn btn-replay" id="replay-btn">Replay taps</button>
+      <button type="button" class="btn btn-amber" id="clear-start-btn" title="Clear lyrics and taps, then return to the start of the waveform">Clear &amp; Start Over</button>
       <span class="file-name" id="file-name"></span>
       <button type="button" class="link-btn" id="change-file-btn">Change file</button>
       <button type="button" class="link-btn" id="external-btn-bar">Use no file</button>
@@ -240,6 +245,7 @@ section h2 .icon{font-size:1.1rem}
       </div>
       <div class="data-actions">
         <button type="button" class="btn btn-ghost" id="export-btn">Export taps</button>
+        <button type="button" class="btn btn-ghost" id="export-mp3-btn" hidden>Export MP3 with metadata</button>
         <button type="button" class="btn btn-ghost" id="import-btn">Import taps</button>
         <button type="button" class="btn btn-process" id="process-btn">Process so far</button>
       </div>
@@ -313,7 +319,11 @@ section h2 .icon{font-size:1.1rem}
             <tr><td>, / .</td><td>Select the previous / next syllable tap on the waveform and phrase diagram</td></tr>
             <tr><td>Enter or New line</td><td>Next lyric line + tap on that line (can be turned off in Settings)</td></tr>
             <tr><td>Backspace</td><td>Delete last tap · Pause · Seek to the previous tap on the waveform</td></tr>
+            <tr><td>Start</td><td>Jump to the beginning of the waveform</td></tr>
+            <tr><td>First tap</td><td>Jump to the first recorded syllable on the waveform</td></tr>
             <tr><td>Replay taps</td><td>Play from the first tap and flash each recorded syllable (no file needed in external mode)</td></tr>
+            <tr><td>Clear &amp; Start Over</td><td>After Yes, clear lyrics and taps and return to the start of the waveform</td></tr>
+            <tr><td>Export MP3 with metadata</td><td>Save a copy of the loaded MP3 with tap data in an ID3v2 tag (MP3 only)</td></tr>
             <tr><td>Right-click / long-press a tap</td><td>Delete that syllable on the waveform or phrase diagram (asks Yes / No)</td></tr>
             <tr><td>Wheel on waveform</td><td>Zoom in / out · Shift+wheel scrolls sideways</td></tr>
           </table>
@@ -353,6 +363,7 @@ const EXTERNAL_FILE_NAME = 'External audio';
 const EXTERNAL_MIN_DURATION = 60;
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 16;
+const MP3_TXXX_DESC = 'shibZ.taps';
 const RESERVED_CODES = new Set([
   'Space','Backspace','Enter','NumpadEnter','Tab','Escape','CapsLock','ControlLeft','ControlRight',
   'ShiftLeft','ShiftRight','AltLeft','AltRight','MetaLeft','MetaRight','ContextMenu','Dead',
@@ -362,6 +373,7 @@ const RESERVED_CODES = new Set([
 
 let audioCtx = null;
 let audioBuffer = null;
+let originalMp3Bytes = null;
 let externalMode = false;
 let externalDuration = 60;
 let externalLayoutPending = false;
@@ -425,6 +437,7 @@ const copyBtn = document.getElementById('copy-prompt-btn');
 const processBtn = document.getElementById('process-btn');
 const processBtn2 = document.getElementById('process-btn-2');
 const exportBtn = document.getElementById('export-btn');
+const exportMp3Btn = document.getElementById('export-mp3-btn');
 const importBtn = document.getElementById('import-btn');
 const importBtnUpload = document.getElementById('import-btn-upload');
 const tapImportInput = document.getElementById('tap-import-input');
@@ -434,6 +447,8 @@ const promptOutput = document.getElementById('prompt-output');
 const waveformWrap = document.getElementById('waveform-wrap');
 const waveformInner = document.getElementById('waveform-inner');
 const playBtn = document.getElementById('play-btn');
+const gotoStartBtn = document.getElementById('goto-start-btn');
+const gotoFirstTapBtn = document.getElementById('goto-first-tap-btn');
 const zoomSlider = document.getElementById('zoom-slider');
 const zoomVal = document.getElementById('zoom-val');
 const deviceSkewSlider = document.getElementById('device-skew-slider');
@@ -444,6 +459,7 @@ const deviceSkewRow = document.getElementById('device-skew-row');
 const reactionSkewSlider = document.getElementById('reaction-skew-slider');
 const reactionSkewVal = document.getElementById('reaction-skew-val');
 const replayBtn = document.getElementById('replay-btn');
+const clearStartBtn = document.getElementById('clear-start-btn');
 const confirmOverlay = document.getElementById('confirm-overlay');
 const confirmText = document.getElementById('confirm-text');
 const confirmYes = document.getElementById('confirm-yes');
@@ -636,6 +652,7 @@ function shibZReadPrefs(){
 }
 function shibZSavePrefs(){
   try {
+    const prev = shibZReadPrefs();
     localStorage.setItem(PREFS_KEY, JSON.stringify({
       lang: langInput.value,
       style: styleInput.value,
@@ -645,7 +662,8 @@ function shibZSavePrefs(){
       reactionSkewMs,
       zoomLevel,
       phraseNewestFirst,
-      enterTapsNewLine
+      enterTapsNewLine,
+      showLyricsSeparator: typeof prev.showLyricsSeparator === 'boolean' ? prev.showLyricsSeparator : false
     }));
   } catch(e){}
 }
@@ -773,6 +791,167 @@ function shibZExportTaps(){
   a.click();
   URL.revokeObjectURL(a.href);
   shibZIoStatus('Exported '+taps.length+' taps.');
+}
+
+function shibZUtf8Bytes(str){
+  return new TextEncoder().encode(String(str||''));
+}
+function shibZReadSynchsafe(u, o){
+  return ((u[o]&0x7f)<<21)|((u[o+1]&0x7f)<<14)|((u[o+2]&0x7f)<<7)|(u[o+3]&0x7f);
+}
+function shibZWriteSynchsafe(n){
+  n = n>>>0;
+  return Uint8Array.of((n>>>21)&0x7f, (n>>>14)&0x7f, (n>>>7)&0x7f, n&0x7f);
+}
+function shibZId3TagSize(u){
+  if(!u || u.length<10 || u[0]!==0x49 || u[1]!==0x44 || u[2]!==0x33) return 0;
+  let size = 10 + shibZReadSynchsafe(u, 6);
+  if(u[5]&0x10) size += 10;
+  return Math.min(size, u.length);
+}
+function shibZIsWavBytes(u){
+  if(!u || u.length<12) return false;
+  let off = 0;
+  const tag = shibZId3TagSize(u);
+  if(tag>=10) off = tag;
+  return u.length>=off+12 &&
+    u[off]===0x52 && u[off+1]===0x49 && u[off+2]===0x46 && u[off+3]===0x46 &&
+    u[off+8]===0x57 && u[off+9]===0x41 && u[off+10]===0x56 && u[off+11]===0x45;
+}
+function shibZIsMp3Bytes(u){
+  if(!u || u.length<2 || shibZIsWavBytes(u)) return false;
+  let off = 0;
+  const tag = shibZId3TagSize(u);
+  if(tag>=10) off = tag;
+  const end = Math.min(u.length-1, off+65536);
+  for(let i=off;i<end;i++){
+    if(u[i]===0xFF && (u[i+1]&0xE0)===0xE0 && (u[i+1]&0x18)!==0x08) return true;
+  }
+  return false;
+}
+function shibZKeepMp3Original(file, bytes){
+  const name = (file && file.name || '').toLowerCase();
+  if(name.endsWith('.wav') || name.endsWith('.wave')) return null;
+  if(!shibZIsMp3Bytes(bytes)) return null;
+  return bytes;
+}
+function shibZTxxxDescription(data){
+  if(!data || !data.length) return '';
+  const enc = data[0];
+  if(enc===0 || enc===3){
+    let end = 1;
+    while(end<data.length && data[end]!==0) end++;
+    try { return new TextDecoder(enc===3?'utf-8':'latin1').decode(data.subarray(1,end)); }
+    catch(e){ return ''; }
+  }
+  if(enc===1 || enc===2){
+    let end = 1;
+    while(end+1<data.length && !(data[end]===0 && data[end+1]===0)) end += 2;
+    try { return new TextDecoder('utf-16'+(enc===1?'':'be')).decode(data.subarray(1,end)); }
+    catch(e){ return ''; }
+  }
+  return '';
+}
+function shibZIsOurMetadataFrame(frame){
+  return frame && frame.id==='TXXX' && shibZTxxxDescription(frame.data)===MP3_TXXX_DESC;
+}
+function shibZParseId3(u){
+  if(!u || u.length<10 || u[0]!==0x49 || u[1]!==0x44 || u[2]!==0x33){
+    return { frames:[], audioStart:0 };
+  }
+  const ver = u[3];
+  const flags = u[5];
+  const tagSize = shibZReadSynchsafe(u, 6);
+  let audioStart = Math.min(u.length, 10 + tagSize + ((flags&0x10)?10:0));
+  const frames = [];
+  if((ver===3 || ver===4) && !(flags&0x80) && !(flags&0x40)){
+    let offset = 10;
+    const tagEnd = Math.min(u.length, 10 + tagSize);
+    while(offset+10 <= tagEnd){
+      if(u[offset]===0) break;
+      const id = String.fromCharCode(u[offset], u[offset+1], u[offset+2], u[offset+3]);
+      if(!/^[A-Z0-9]{4}$/.test(id)) break;
+      const size = ver===4
+        ? shibZReadSynchsafe(u, offset+4)
+        : ((u[offset+4]<<24)|(u[offset+5]<<16)|(u[offset+6]<<8)|u[offset+7])>>>0;
+      const frFlags = (u[offset+8]<<8)|u[offset+9];
+      offset += 10;
+      if(!size || offset+size>tagEnd) break;
+      if((frFlags & 0x0C)===0){
+        frames.push({ id, data: u.slice(offset, offset+size) });
+      }
+      offset += size;
+    }
+  }
+  return { frames, audioStart };
+}
+function shibZMakeId3Frame(id, body){
+  const out = new Uint8Array(10 + body.length);
+  for(let i=0;i<4;i++) out[i] = id.charCodeAt(i);
+  out.set(shibZWriteSynchsafe(body.length), 4);
+  out.set(body, 10);
+  return out;
+}
+function shibZMakeTxxxBody(desc, value){
+  const d = shibZUtf8Bytes(desc);
+  const v = shibZUtf8Bytes(value);
+  const body = new Uint8Array(1 + d.length + 1 + v.length + 1);
+  body[0] = 3;
+  body.set(d, 1);
+  body[1+d.length] = 0;
+  body.set(v, 2+d.length);
+  return body;
+}
+function shibZBuildId3v24(frames){
+  const parts = frames.map(frame => shibZMakeId3Frame(frame.id, frame.data));
+  let bodyLen = 256;
+  for(const p of parts) bodyLen += p.length;
+  const out = new Uint8Array(10 + bodyLen);
+  out[0]=0x49; out[1]=0x44; out[2]=0x33; out[3]=4; out[4]=0; out[5]=0;
+  out.set(shibZWriteSynchsafe(bodyLen), 6);
+  let o = 10;
+  for(const p of parts){ out.set(p, o); o += p.length; }
+  return out;
+}
+function shibZBuildMp3Metadata(){
+  const data = shibZBuildExport();
+  if(typeof lyricsRaw === 'string') data.lyrics = lyricsRaw;
+  return JSON.stringify(data);
+}
+function shibZSyncExportMp3Btn(){
+  if(!exportMp3Btn) return;
+  const hasMp3 = !!(originalMp3Bytes && originalMp3Bytes.length);
+  exportMp3Btn.hidden = !hasMp3;
+  exportMp3Btn.disabled = !hasMp3 || taps.length===0;
+}
+function shibZExportMp3WithMetadata(){
+  if(!originalMp3Bytes || !originalMp3Bytes.length){
+    shibZIoStatus('Load an MP3 to export metadata in the file.', true);
+    return;
+  }
+  if(taps.length===0){
+    shibZIoStatus('No taps to export yet.', true);
+    return;
+  }
+  try {
+    const parsed = shibZParseId3(originalMp3Bytes);
+    const frames = parsed.frames.filter(f => !shibZIsOurMetadataFrame(f));
+    frames.push({ id:'TXXX', data: shibZMakeTxxxBody(MP3_TXXX_DESC, shibZBuildMp3Metadata()) });
+    const tag = shibZBuildId3v24(frames);
+    const audio = originalMp3Bytes.subarray(parsed.audioStart);
+    const out = new Uint8Array(tag.length + audio.length);
+    out.set(tag, 0);
+    out.set(audio, tag.length);
+    const blob = new Blob([out], { type: 'audio/mpeg' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = shibZSafeFileSlug(currentFileName)+'-with-taps.mp3';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    shibZIoStatus('Exported MP3 with tap metadata.');
+  } catch(err){
+    shibZIoStatus('Could not write MP3 metadata.', true);
+  }
 }
 
 function shibZNormalizeImported(data){
@@ -949,8 +1128,11 @@ async function shibZLoadFile(file){
   if(!audioCtx) return;
   if(audioCtx.state==='suspended') await audioCtx.resume();
   shibZStopPlayback();
+  originalMp3Bytes = null;
   const buf = await file.arrayBuffer();
+  const bytes = new Uint8Array(buf.slice(0));
   audioBuffer = await audioCtx.decodeAudioData(buf.slice(0));
+  originalMp3Bytes = shibZKeepMp3Original(file, bytes);
   externalMode = false;
   currentFileName = file.name;
   fileNameEl.textContent = file.name;
@@ -1017,6 +1199,7 @@ function shibZShowStudio(){
 function shibZStartExternalMode(){
   shibZStopPlayback();
   audioBuffer = null;
+  originalMp3Bytes = null;
   waveformData = null;
   externalMode = true;
   currentFileName = EXTERNAL_FILE_NAME;
@@ -1170,6 +1353,29 @@ function shibZStepSelectedTap(dir){
   shibZSyncTableHighlight(pausedAt);
 }
 
+function shibZGotoWaveformStart(){
+  if(!shibZHasTimeline()) return;
+  shibZPause();
+  selectedTap = null;
+  pausedAt = 0;
+  rewindBanner.style.display='none';
+  if(waveformWrap) waveformWrap.scrollLeft = 0;
+  lastHighlightKey='';
+  shibZSyncTableHighlight(0);
+}
+
+function shibZGotoFirstTap(){
+  if(!shibZHasTimeline() || !taps.length) return;
+  const first = Math.min(...taps);
+  shibZPause();
+  selectedTap = first;
+  pausedAt = Math.max(0, Math.min(first, shibZDuration()));
+  rewindBanner.style.display='none';
+  shibZRevealTime(pausedAt);
+  lastHighlightKey='';
+  shibZSyncTableHighlight(pausedAt);
+}
+
 function shibZSetSpeed(rate, restart){
   const next = SPEED_RATES.includes(rate) ? rate : 1;
   const wasPlaying = isPlaying;
@@ -1189,6 +1395,9 @@ playBtn.addEventListener('click', ()=>{
   if(!shibZHasTimeline()) return;
   if(isPlaying) shibZPause(); else shibZPlay();
 });
+if(gotoStartBtn) gotoStartBtn.addEventListener('click', ()=> shibZGotoWaveformStart());
+if(gotoFirstTapBtn) gotoFirstTapBtn.addEventListener('click', ()=> shibZGotoFirstTap());
+if(clearStartBtn) clearStartBtn.addEventListener('click', ()=> shibZConfirmClearAndStartOver());
 replayBtn.addEventListener('click', ()=> shibZReplay());
 document.addEventListener('pointerdown', e=>{
   lastPointerType = e.pointerType || 'mouse';
@@ -1256,7 +1465,9 @@ function shibZUpdatePhraseTable(){
   tapBadge.textContent = taps.length+' tap'+(taps.length===1?'':'s');
   lineBadge.textContent = phrases.length+' line'+(phrases.length===1?'':'s');
   replayBtn.disabled = taps.length===0;
+  if(gotoFirstTapBtn) gotoFirstTapBtn.disabled = taps.length===0;
   if(exportBtn) exportBtn.disabled = taps.length===0;
+  shibZSyncExportMp3Btn();
   shibZSyncPhraseOrderBtn();
   if(phrases.length===0){
     phraseTbody.innerHTML='<tr><td colspan="6" style="color:var(--text-dim);text-align:center">No taps recorded yet</td></tr>';
@@ -1372,17 +1583,52 @@ function shibZCloseConfirm(){
   if(!confirmOverlay) return;
   confirmOverlay.classList.remove('show');
   confirmOverlay.removeAttribute('data-tap');
+  confirmOverlay.removeAttribute('data-action');
+}
+
+function shibZOpenConfirm(action, message){
+  if(!confirmOverlay || !confirmText){
+    if(window.confirm(message)) shibZHandleConfirmAction(action);
+    return;
+  }
+  confirmText.textContent = message;
+  confirmOverlay.setAttribute('data-action', action);
+  confirmOverlay.removeAttribute('data-tap');
+  confirmOverlay.classList.add('show');
 }
 
 function shibZConfirmDeleteTap(tap){
   if(!isFinite(tap) || shibZFindTapIndex(tap)<0) return;
+  const message = 'Delete this syllable tap at '+shibZFmtTime(tap)+'?';
   if(!confirmOverlay || !confirmText){
-    if(window.confirm('Delete this syllable tap at '+shibZFmtTime(tap)+'?')) shibZRemoveTapAt(tap);
+    if(window.confirm(message)) shibZRemoveTapAt(tap);
     return;
   }
-  confirmText.textContent='Delete this syllable tap at '+shibZFmtTime(tap)+'?';
+  confirmText.textContent = message;
+  confirmOverlay.setAttribute('data-action', 'delete-tap');
   confirmOverlay.setAttribute('data-tap', String(tap));
   confirmOverlay.classList.add('show');
+}
+
+function shibZConfirmClearAndStartOver(){
+  shibZOpenConfirm('clear-start', 'Clear lyrics and tap data, then start over from the beginning of the waveform?');
+}
+
+function shibZClearAndStartOver(){
+  taps = [];
+  manualBreaks = [];
+  selectedTap = null;
+  if(externalMode) externalDuration = EXTERNAL_MIN_DURATION;
+  shibZGotoWaveformStart();
+  if(shibZHasTimeline()) shibZLayoutWaveform();
+  shibZUpdatePhraseTable();
+  shibZSyncTapPad();
+  shibZSaveSession();
+}
+
+function shibZHandleConfirmAction(action, tap){
+  if(action === 'clear-start') shibZClearAndStartOver();
+  else if(action === 'delete-tap' && isFinite(tap)) shibZRemoveTapAt(tap);
 }
 
 function shibZAdvanceLine(){
@@ -1719,9 +1965,10 @@ if(phraseTbody){
 
 if(confirmYes){
   confirmYes.addEventListener('click', ()=>{
-    const tap=parseFloat(confirmOverlay?.getAttribute('data-tap'));
+    const action = confirmOverlay?.getAttribute('data-action') || 'delete-tap';
+    const tap = parseFloat(confirmOverlay?.getAttribute('data-tap'));
     shibZCloseConfirm();
-    if(isFinite(tap)) shibZRemoveTapAt(tap);
+    shibZHandleConfirmAction(action, tap);
   });
 }
 if(confirmNo) confirmNo.addEventListener('click', shibZCloseConfirm);
@@ -1889,6 +2136,7 @@ copyBtn.addEventListener('click', ()=> shibZProcess({ scroll:false }));
 processBtn.addEventListener('click', ()=> shibZProcess({ scroll:true }));
 processBtn2.addEventListener('click', ()=> shibZProcess({ scroll:false }));
 exportBtn.addEventListener('click', shibZExportTaps);
+if(exportMp3Btn) exportMp3Btn.addEventListener('click', shibZExportMp3WithMetadata);
 importBtn.addEventListener('click', shibZOpenImportPicker);
 importBtnUpload.addEventListener('click', e=>{
   e.stopPropagation();
