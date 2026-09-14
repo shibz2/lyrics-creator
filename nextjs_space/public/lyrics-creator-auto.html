@@ -109,7 +109,6 @@ section h2 .icon{font-size:1.1rem}
 #phrase-table .phrase-visual{display:block;width:100%;height:auto;aspect-ratio:320/40;color:var(--text);overflow:visible}
 #phrase-table .phrase-visual.has-lyrics{width:100%}
 #phrase-table .phrase-visual.mismatch text{fill:var(--orange)}
-#phrase-table .phrase-visual.verify-bad .tap-lyric.ok{fill:inherit}
 #phrase-table .lyric-miss-slot,#phrase-table .lyric-extra-bg{fill:rgba(255,85,85,.28);stroke:var(--red);stroke-width:1.15;pointer-events:none}
 #phrase-table .tap-lyric.extra{fill:#ffb4b4;font-weight:700}
 #phrase-table .count-mismatch{color:var(--red);font-weight:700}
@@ -190,6 +189,7 @@ section h2 .icon{font-size:1.1rem}
 #debug-io{display:none}
 #debug-io.show{display:block}
 #debug-io textarea{width:100%;min-height:88px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;color:var(--text);font-family:'SF Mono',Consolas,monospace;font-size:.78rem;margin:4px 0 12px;resize:vertical}
+#debug-output{min-height:240px}
 #debug-input{min-height:140px}
 
 .setting-help{font-size:.75rem;color:var(--text-dim);margin:-4px 0 12px 0}
@@ -362,7 +362,7 @@ section h2 .icon{font-size:1.1rem}
   <section id="debug-io">
     <h2>Output and input</h2>
     <div class="form-grid">
-      <div class="full"><label for="debug-output">Output</label><textarea id="debug-output" readonly placeholder="Pattern sent to the AI…"></textarea></div>
+      <div class="full"><label for="debug-output">Output</label><textarea id="debug-output" readonly placeholder="Complete prompt sent to the AI…"></textarea></div>
       <div class="full"><label for="debug-input">Input</label><textarea id="debug-input" readonly placeholder="Unedited AI response…"></textarea></div>
     </div>
   </section>
@@ -480,7 +480,7 @@ const EXTERNAL_MIN_DURATION = 60;
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 16;
 const MP3_TXXX_DESC = 'shibZ.taps';
-const APP_VERSION = 'v11';
+const APP_VERSION = 'v12';
 const GITHUB_TAGS_URL = 'https://api.github.com/repos/shibz2/lyrics-creator/tags?per_page=40';
 const RESERVED_CODES = new Set([
   'Space','Backspace','Enter','NumpadEnter','Tab','Escape','CapsLock','ControlLeft','ControlRight',
@@ -528,8 +528,11 @@ let lyricsRaw = '';
 let lyricsGeneratedOnce = false;
 let generateBusy = false;
 let selectedTap = null;
-let debugSentPattern = '';
+let debugSentPrompt = '';
 let debugRawReply = '';
+let eggArmed = false;
+let eggBuf = '';
+let eggArmTimer = null;
 
 const uploadZone = document.getElementById('upload-zone');
 const uploadSection = document.getElementById('upload-section');
@@ -1917,8 +1920,7 @@ function shibZVisualPhrase(ph, color, syllables, opts){
     }
     svg+=shibZTapShapeSvg(x, lineY, shibZKindAtTap(tapsPh[idx]), color, tapKey);
     if(syl[idx]){
-      const cls = 'tap-lyric'+(verifyOn?' ok':'');
-      svg+=`<text class="${cls}" data-tap="${tapKey}" x="${x.toFixed(1)}" y="34" text-anchor="middle" fill="${color}" font-size="9" font-family="Segoe UI,system-ui,sans-serif">${shibZEscXml(syl[idx])}</text>`;
+      svg+=`<text class="tap-lyric" data-tap="${tapKey}" x="${x.toFixed(1)}" y="34" text-anchor="middle" fill="${color}" font-size="9" font-family="Segoe UI,system-ui,sans-serif">${shibZEscXml(syl[idx])}</text>`;
     }
   });
   extraXs.forEach((x, i)=>{
@@ -2282,7 +2284,7 @@ function shibZClearAndStartOver(){
   if(externalMode) externalDuration = EXTERNAL_MIN_DURATION;
   lyricsRaw = '';
   lyricsGeneratedOnce = false;
-  debugSentPattern = '';
+  debugSentPrompt = '';
   debugRawReply = '';
   if(lyricsOutput) lyricsOutput.value = '';
   try { localStorage.removeItem(GENERATED_KEY); } catch(e){}
@@ -2737,6 +2739,8 @@ document.addEventListener('keydown', e=>{
   }
   if(shibZIsTypingTarget(e.target)) return;
 
+  if(shibZFeedEggKey(e)) return;
+
   if(e.code==='Space'){
     e.preventDefault();
     if(e.repeat||!shibZHasTimeline()) return;
@@ -2912,16 +2916,66 @@ function shibZSetGenerateBusy(busy){
 }
 
 function shibZSyncDebugIo(){
-  if(debugOutputEl) debugOutputEl.value = debugSentPattern || shibZRhythmPattern();
+  if(debugOutputEl){
+    if(debugSentPrompt) debugOutputEl.value = debugSentPrompt;
+    else {
+      const result = shibZBuildPrompt();
+      debugOutputEl.value = result.ok ? result.text : '';
+    }
+  }
   if(debugInputEl) debugInputEl.value = debugRawReply;
 }
 
-function shibZToggleDebugIo(){
+function shibZClearEggArm(){
+  eggArmed = false;
+  eggBuf = '';
+  if(eggArmTimer){
+    clearTimeout(eggArmTimer);
+    eggArmTimer = null;
+  }
+}
+
+function shibZHideDebugIo(){
+  shibZClearEggArm();
+  if(debugIoSection) debugIoSection.classList.remove('show');
+}
+
+function shibZShowDebugIo(){
+  shibZClearEggArm();
   if(!debugIoSection) return;
-  const on = !debugIoSection.classList.contains('show');
-  debugIoSection.classList.toggle('show', on);
+  debugIoSection.classList.add('show');
   shibZSyncDebugIo();
-  if(on) debugIoSection.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  debugIoSection.scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+
+function shibZArmEgg(){
+  eggArmed = true;
+  eggBuf = '';
+  if(eggArmTimer) clearTimeout(eggArmTimer);
+  eggArmTimer = setTimeout(shibZClearEggArm, 12000);
+}
+
+function shibZFeedEggKey(e){
+  if(!eggArmed || debugIoSection?.classList.contains('show')) return false;
+  if(e.ctrlKey || e.altKey || e.metaKey) return false;
+  if(e.key==='Shift' || e.key==='Control' || e.key==='Alt' || e.key==='Meta') return false;
+  if(e.repeat) return false;
+  const ch = e.key.length===1 ? e.key.toLowerCase() : '';
+  if(!/^[a-z]$/.test(ch)){
+    eggBuf = '';
+    return false;
+  }
+  e.preventDefault();
+  const next = eggBuf + ch;
+  if('shibz'.startsWith(next)){
+    eggBuf = next;
+    if(eggArmTimer) clearTimeout(eggArmTimer);
+    eggArmTimer = setTimeout(shibZClearEggArm, 12000);
+    if(eggBuf==='shibz') shibZShowDebugIo();
+  } else {
+    eggBuf = 'shibz'.startsWith(ch) ? ch : '';
+  }
+  return true;
 }
 
 function shibZClearGeneratedOnLoad(){
@@ -3013,7 +3067,7 @@ async function shibZGenerate(){
   }
   shibZSetGenerateStatus('Generating…');
   shibZSetGenerateBusy(true);
-  debugSentPattern = shibZRhythmPattern();
+  debugSentPrompt = result.text;
   shibZSyncDebugIo();
   try {
     const lyrics = await shibZCallGenerateApi(result.text);
@@ -3162,7 +3216,8 @@ shibZFillAppVersion();
 if(eggO) eggO.addEventListener('click', e=>{
   e.preventDefault();
   e.stopPropagation();
-  shibZToggleDebugIo();
+  if(debugIoSection?.classList.contains('show')) shibZHideDebugIo();
+  else shibZArmEgg();
 });
 shibZClearGeneratedOnLoad();
 shibZSyncGenerateButtons();
