@@ -79,17 +79,24 @@ section h2 .icon{font-size:1.1rem}
 .speed-btn:hover{border-color:var(--accent)}
 .link-btn{background:none;border:none;color:var(--accent);cursor:pointer;font-size:.78rem;padding:0}
 
-#phrase-table-wrap{margin-top:14px;overflow-x:auto}
-#phrase-table{width:100%;border-collapse:collapse;font-size:.8rem}
+#phrase-table-wrap{overflow-x:auto}
+#phrase-table{width:100%;min-width:36rem;border-collapse:collapse;table-layout:fixed;font-size:.8rem}
 #phrase-table th{text-align:left;color:var(--text-dim);font-weight:500;padding:6px 10px;border-bottom:1px solid var(--border)}
 #phrase-table td{padding:6px 10px;border-bottom:1px solid var(--border)}
 #phrase-table .color-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
-#phrase-table .phrase-visual{display:block;width:220px;height:22px;overflow:visible}
-#phrase-table td.visual-cell{width:240px;overflow:visible}
+#phrase-table .col-phrase{width:4.4rem}
+#phrase-table .col-count{width:5rem}
+#phrase-table .col-visual,#phrase-table td.visual-cell{width:auto;min-width:12rem;vertical-align:middle;overflow:visible}
+#phrase-table th.col-visual{text-align:center}
+#phrase-table .col-time,#phrase-table td.time-cell{width:4.8rem;padding-left:4px;padding-right:4px;white-space:nowrap;font-variant-numeric:tabular-nums;font-size:.72rem}
+#phrase-table .col-dur,#phrase-table td.dur-cell{width:4.2rem;padding-left:4px;padding-right:4px;white-space:nowrap;font-variant-numeric:tabular-nums;font-size:.72rem}
+#phrase-table .phrase-visual{display:block;width:100%;height:22px;overflow:visible}
 #phrase-table .tap-dot,#phrase-table .tap-hit{cursor:context-menu}
 #phrase-table .tap-dot.played{filter:brightness(1.35)}
 #phrase-table .tap-dot.active{stroke:#fff;stroke-width:2.4;filter:drop-shadow(0 0 5px #fff)}
-.phrase-table-bar{display:flex;align-items:center;gap:10px;margin:12px 0 8px;flex-wrap:wrap}
+.phrase-diagram{margin-top:16px;border:1px solid var(--border);border-radius:10px;padding:14px 16px 12px;background:rgba(0,0,0,.18)}
+.phrase-diagram h3{font-size:.9rem;font-weight:600;margin:0 0 10px}
+.phrase-table-bar{display:flex;align-items:center;gap:10px;margin:0 0 8px;flex-wrap:wrap}
 .phrase-table-bar .hint{font-size:.78rem;color:var(--text-dim)}
 .confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:80;padding:16px}
 .confirm-overlay.show{display:flex}
@@ -146,7 +153,12 @@ section h2 .icon{font-size:1.1rem}
   section{padding:16px}
   header{grid-template-columns:40px 1fr;gap:8px}
   .site-logo img{height:36px;width:36px}
-  #phrase-table .phrase-visual{width:160px}
+  #phrase-table{min-width:32rem}
+  #phrase-table .col-phrase{width:3rem}
+  #phrase-table .col-count{width:3.6rem}
+  #phrase-table .col-visual,#phrase-table td.visual-cell{min-width:10rem}
+  #phrase-table .col-time,#phrase-table td.time-cell{width:4.1rem;padding-left:2px;padding-right:2px}
+  #phrase-table .col-dur,#phrase-table td.dur-cell{width:2.8rem;padding-left:2px;padding-right:2px}
   .tap-pad{min-height:84px;font-size:1.12rem}
   .tap-pad-row{position:sticky;bottom:8px;z-index:5}
 }
@@ -239,16 +251,19 @@ section h2 .icon{font-size:1.1rem}
       <span class="val" id="gap-val">1.5s</span>
     </div>
 
-    <div class="phrase-table-bar">
-      <button type="button" class="btn btn-ghost" id="phrase-order-btn">Flip order</button>
-      <span class="hint" id="phrase-order-label">Newest first</span>
-      <span class="hint">Right-click a dot to delete</span>
-    </div>
-    <div id="phrase-table-wrap">
-      <table id="phrase-table">
-        <thead><tr><th>Phrase</th><th>Syllables</th><th>Visual phrase</th><th>Start</th><th>End</th><th>Duration</th></tr></thead>
-        <tbody id="phrase-tbody"></tbody>
-      </table>
+    <div class="phrase-diagram">
+      <h3>Phrase diagram</h3>
+      <div class="phrase-table-bar">
+        <button type="button" class="btn btn-ghost" id="phrase-order-btn">Flip order</button>
+        <span class="hint" id="phrase-order-label">Newest first</span>
+        <span class="hint">Right-click a dot to delete</span>
+      </div>
+      <div id="phrase-table-wrap">
+        <table id="phrase-table">
+          <thead><tr><th class="col-phrase">Phrase</th><th class="col-count">Syllables</th><th class="col-visual">Visual phrase</th><th class="col-time">Start</th><th class="col-time">End</th><th class="col-dur">Duration</th></tr></thead>
+          <tbody id="phrase-tbody"></tbody>
+        </table>
+      </div>
     </div>
   </section>
 
@@ -295,10 +310,11 @@ section h2 .icon{font-size:1.1rem}
             <tr><td>Spacebar or Play</td><td>Play / Pause the track or the external-audio timer</td></tr>
             <tr><td>Any other key or Tap syllable</td><td>Record a syllable (while playing)</td></tr>
             <tr><td>← / →</td><td>Seek backward / forward 2 seconds</td></tr>
+            <tr><td>, / .</td><td>Select the previous / next syllable tap on the waveform and phrase diagram</td></tr>
             <tr><td>Enter or New line</td><td>Next lyric line + tap on that line (can be turned off in Settings)</td></tr>
             <tr><td>Backspace</td><td>Delete last tap · Pause · Seek to the previous tap on the waveform</td></tr>
             <tr><td>Replay taps</td><td>Play from the first tap and flash each recorded syllable (no file needed in external mode)</td></tr>
-            <tr><td>Right-click / long-press a tap</td><td>Delete that syllable on the waveform or phrase table (asks Yes / No)</td></tr>
+            <tr><td>Right-click / long-press a tap</td><td>Delete that syllable on the waveform or phrase diagram (asks Yes / No)</td></tr>
             <tr><td>Wheel on waveform</td><td>Zoom in / out · Shift+wheel scrolls sideways</td></tr>
           </table>
         </div>
@@ -340,7 +356,8 @@ const MAX_ZOOM = 16;
 const RESERVED_CODES = new Set([
   'Space','Backspace','Enter','NumpadEnter','Tab','Escape','CapsLock','ControlLeft','ControlRight',
   'ShiftLeft','ShiftRight','AltLeft','AltRight','MetaLeft','MetaRight','ContextMenu','Dead',
-  'ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','PageUp','PageDown','Insert','Delete'
+  'ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','PageUp','PageDown','Insert','Delete',
+  'Comma','Period','NumpadDecimal'
 ]);
 
 let audioCtx = null;
@@ -374,6 +391,7 @@ let replayActiveTap = null;
 let replayFlashAt = 0;
 let replayFlashTimer = null;
 let lastHighlightKey = '';
+let selectedTap = null;
 
 const uploadZone = document.getElementById('upload-zone');
 const uploadSection = document.getElementById('upload-section');
@@ -592,9 +610,15 @@ function shibZSetZoom(next, anchorTime){
 }
 function shibZFollowPlayhead(){
   if(!shibZHasTimeline() || zoomLevel<=1 || !isPlaying) return;
+  shibZRevealTime(shibZCurrentTime());
+}
+function shibZRevealTime(t){
+  if(!shibZHasTimeline() || !waveformWrap) return;
   const dur=shibZDuration();
-  const x=(shibZCurrentTime()/dur)*canvas.clientWidth;
+  const W=canvas.clientWidth || waveformWrap.clientWidth;
   const view=waveformWrap.clientWidth;
+  if(!dur || !W || !view) return;
+  const x=(t/dur)*W;
   const left=waveformWrap.scrollLeft;
   const margin=view*0.2;
   if(x<left+margin || x>left+view-margin){
@@ -985,6 +1009,7 @@ function shibZStartExternalMode(){
 
 async function shibZPlay(){
   if(!shibZHasTimeline()) return;
+  selectedTap = null;
   if(audioBuffer) await shibZUnlockAudio();
   else {
     try { await shibZUnlockAudio(); } catch(e){}
@@ -1080,7 +1105,42 @@ function shibZSeekTo(t){
 }
 function shibZNudge(delta){
   if(!shibZHasTimeline()) return;
+  selectedTap = null;
   shibZSeekTo(shibZCurrentTime() + delta);
+}
+function shibZStepSelectedTap(dir){
+  if(!shibZHasTimeline() || !taps.length) return;
+  const sorted=[...taps].sort((a,b)=>a-b);
+  const t=shibZCurrentTime();
+  let nearest=0, nearestD=Infinity;
+  for(let i=0;i<sorted.length;i++){
+    const d=Math.abs(sorted[i]-t);
+    if(d<nearestD){ nearestD=d; nearest=i; }
+  }
+  let idx;
+  if(nearestD<=0.02){
+    idx=Math.max(0, Math.min(sorted.length-1, nearest+dir));
+  } else if(dir<0){
+    idx=-1;
+    for(let i=sorted.length-1;i>=0;i--){
+      if(sorted[i]<t){ idx=i; break; }
+    }
+    if(idx<0) idx=0;
+  } else {
+    idx=-1;
+    for(let i=0;i<sorted.length;i++){
+      if(sorted[i]>t){ idx=i; break; }
+    }
+    if(idx<0) idx=sorted.length-1;
+  }
+  const tap=sorted[idx];
+  shibZPause();
+  selectedTap=tap;
+  pausedAt=Math.max(0, Math.min(tap, shibZDuration()));
+  rewindBanner.style.display='none';
+  shibZRevealTime(pausedAt);
+  lastHighlightKey='';
+  shibZSyncTableHighlight(pausedAt);
 }
 
 function shibZSetSpeed(rate, restart){
@@ -1187,7 +1247,7 @@ function shibZUpdatePhraseTable(){
     const color = PHRASE_COLORS[i%PHRASE_COLORS.length];
     const start=ph[0], end=ph[ph.length-1];
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td><span class="color-dot" style="background:${color}"></span>${i+1}</td><td>${ph.length}</td><td class="visual-cell">${shibZVisualPhrase(ph,color)}</td><td>${shibZFmtTime(start)}</td><td>${shibZFmtTime(end)}</td><td>${(end-start).toFixed(2)}s</td>`;
+    tr.innerHTML=`<td class="col-phrase"><span class="color-dot" style="background:${color}"></span>${i+1}</td><td class="col-count">${ph.length}</td><td class="visual-cell">${shibZVisualPhrase(ph,color)}</td><td class="time-cell">${shibZFmtTime(start)}</td><td class="time-cell">${shibZFmtTime(end)}</td><td class="dur-cell">${(end-start).toFixed(2)}s</td>`;
     phraseTbody.appendChild(tr);
   }
   lastHighlightKey='';
@@ -1211,6 +1271,7 @@ function shibZFindTapIndex(raw){
 
 function shibZActivePlaybackTap(t){
   if(isReplaying && replayActiveTap!=null) return replayActiveTap;
+  if(!isPlaying && selectedTap!=null) return selectedTap;
   if(!taps.length) return null;
   let best=null;
   for(let i=0;i<taps.length;i++){
@@ -1233,7 +1294,7 @@ function shibZSyncTableHighlight(playT){
   if(key !== lastHighlightKey){
     lastHighlightKey = key;
     const el = phraseTbody.querySelector('.tap-dot.active');
-    if(el && (isPlaying || isReplaying)) el.closest('tr')?.scrollIntoView({block:'nearest', inline:'nearest'});
+    if(el) el.closest('tr')?.scrollIntoView({block:'nearest', inline:'nearest'});
   }
 }
 
@@ -1714,6 +1775,19 @@ document.addEventListener('keydown', e=>{
     if(!shibZHasTimeline()) return;
     shibZNudge(e.code==='ArrowLeft' ? -SEEK_STEP : SEEK_STEP);
     rewindBanner.style.display='none';
+    return;
+  }
+
+  if(e.key===',' || e.code==='Comma'){
+    e.preventDefault();
+    if(e.repeat) return;
+    shibZStepSelectedTap(-1);
+    return;
+  }
+  if(e.key==='.' || e.code==='Period' || e.code==='NumpadDecimal'){
+    e.preventDefault();
+    if(e.repeat) return;
+    shibZStepSelectedTap(1);
     return;
   }
 
