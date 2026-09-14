@@ -1475,11 +1475,11 @@ function shibZBuildPrompt(){
     lines+=`Line ${i+1}: ${ph.length} syllable${ph.length!==1?'s':''}\n`;
   });
 
-  let prompt=`You are a lyricist. Write song lyrics matching the EXACT syllable structure below.\n\n`;
-  prompt+=`Language: ${lang}\n`;
-  if(style) prompt+=`Style / Mood: ${style}\n`;
-  prompt+=`\nSyllable structure:\n${lines}`;
-  prompt+=`\nRules:\n- Match the syllable count of each line EXACTLY.\n- Separate every syllable with a vertical bar |. Example for 4 syllables: Hel|lo|there|friend\n- One lyrics line per phrase, in the same order as the structure above.\n- The number of | -separated tokens on each line must equal that line's syllable count.\n- Maintain natural rhythm and rhyme.\n- Output ONLY the lyrics, nothing else. No titles, numbering, or commentary.\n`;
+  let prompt=`You are a lyricist. Write song lyrics in ${lang} language`;
+  if(style) prompt+=` matching ${style} style/mood`;
+  prompt+=`, matching the EXACT syllable structure below.\n\n`;
+  prompt+=`Syllable structure:\n${lines}`;
+  prompt+=`\nRules:\n- Match the syllable count of each line EXACTLY.\n- Separate every syllable with a vertical bar |. Example for 4 syllables: He|llo|my|dar|ling\n- One lyrics line per phrase, in the same order as the structure above.\n`;
   if(extra) prompt+=`\nAdditional instructions:\n${extra}\n`;
   return { ok:true, text:prompt };
 }
