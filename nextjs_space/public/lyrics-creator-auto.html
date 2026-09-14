@@ -22,7 +22,7 @@ header{display:grid;grid-template-columns:56px 1fr 56px;align-items:center;paddi
 .header-copy{text-align:center}
 header h1{font-size:1.75rem;font-weight:700;letter-spacing:-.02em}
 header h1 span{color:var(--accent)}
-header h1 .egg-o{cursor:pointer}
+header h1 .egg-o{cursor:inherit}
 header p{color:var(--text-dim);font-size:.85rem;margin-top:4px}
 .settings-gear{justify-self:end;width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--border);background:var(--surface2);color:var(--text);border-radius:10px;cursor:pointer}
 .settings-gear:hover{border-color:var(--accent);color:#fff}
@@ -382,9 +382,12 @@ section h2 .icon{font-size:1.1rem}
           <h3>Key Bindings</h3>
           <table>
             <tr><td>Spacebar or Play</td><td>Play / Pause the track or the external-audio timer</td></tr>
+            <tr><td>Shift + Space</td><td>Replay taps from the first recorded syllable</td></tr>
+            <tr><td>Ctrl + Space</td><td>Play from the beginning of the waveform</td></tr>
             <tr><td>Any other key or Tap syllable</td><td>Record an unmarked syllable (while playing)</td></tr>
             <tr><td>; or :</td><td>Long syllable (oval) while playing, or retag the selected tap</td></tr>
             <tr><td>' or "</td><td>Short syllable (diamond) while playing, or retag the selected tap</td></tr>
+            <tr><td>1 / 2</td><td>Set the selected syllable to short (diamond) / long (oval)</td></tr>
             <tr><td>Click a tap marker</td><td>Choose unmarked, short (diamond), or long (oval)</td></tr>
             <tr><td>← / →</td><td>Seek backward / forward 2 seconds</td></tr>
             <tr><td>, / .</td><td>Select the previous / next syllable tap on the waveform and phrase diagram</td></tr>
@@ -458,13 +461,13 @@ const EXTERNAL_MIN_DURATION = 60;
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 16;
 const MP3_TXXX_DESC = 'shibZ.taps';
-const APP_VERSION = 'v9';
+const APP_VERSION = 'v10';
 const GITHUB_TAGS_URL = 'https://api.github.com/repos/shibz2/lyrics-creator/tags?per_page=40';
 const RESERVED_CODES = new Set([
   'Space','Backspace','Enter','NumpadEnter','Tab','Escape','CapsLock','ControlLeft','ControlRight',
   'ShiftLeft','ShiftRight','AltLeft','AltRight','MetaLeft','MetaRight','ContextMenu','Dead',
   'ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','PageUp','PageDown','Insert','Delete',
-  'Comma','Period','NumpadDecimal','Semicolon','Quote'
+  'Comma','Period','NumpadDecimal','Semicolon','Quote','Digit1','Digit2','Numpad1','Numpad2'
 ]);
 
 let audioCtx = null;
@@ -1686,6 +1689,18 @@ function shibZGotoWaveformStart(){
   shibZSyncTableHighlight(0);
 }
 
+async function shibZPlayFromBeginning(){
+  if(!shibZHasTimeline()) return;
+  shibZPause();
+  selectedTap = null;
+  pausedAt = 0;
+  rewindBanner.style.display='none';
+  if(waveformWrap) waveformWrap.scrollLeft = 0;
+  lastHighlightKey='';
+  shibZSyncTableHighlight(0);
+  await shibZPlay();
+}
+
 function shibZGotoFirstTap(){
   if(!shibZHasTimeline() || !taps.length) return;
   const first = Math.min(...taps);
@@ -2008,6 +2023,7 @@ function shibZOpenKindPicker(tap){
     btn.classList.toggle('active', shibZNormKind(btn.getAttribute('data-kind')) === kind);
   });
   kindOverlay.setAttribute('data-tap', String(tap));
+  selectedTap = tap;
   kindOverlay.classList.add('show');
 }
 
@@ -2028,6 +2044,22 @@ function shibZRetagSelected(kind){
   shibZUpdatePhraseTable();
   shibZSaveSession();
   return true;
+}
+
+function shibZAssignSelectedKind(kind){
+  if(selectedTap==null) return false;
+  const idx = shibZFindTapIndex(selectedTap);
+  if(idx<0) return false;
+  shibZSetKindAtIndex(idx, kind);
+  shibZUpdatePhraseTable();
+  shibZSaveSession();
+  return true;
+}
+
+function shibZKindFromDigit(e){
+  if(e.code==='Digit1' || e.code==='Numpad1') return 'S';
+  if(e.code==='Digit2' || e.code==='Numpad2') return 'L';
+  return null;
 }
 
 function shibZOpenSettings(){
@@ -2511,6 +2543,12 @@ document.addEventListener('keydown', e=>{
     if(e.code==='Escape'){
       e.preventDefault();
       shibZCloseKindPicker();
+    } else {
+      const kind = shibZKindFromDigit(e);
+      if(kind){
+        e.preventDefault();
+        if(!e.repeat) shibZApplyKindChoice(kind);
+      }
     }
     return;
   }
@@ -2538,6 +2576,14 @@ document.addEventListener('keydown', e=>{
   if(e.code==='Space'){
     e.preventDefault();
     if(e.repeat||!shibZHasTimeline()) return;
+    if(e.ctrlKey || e.metaKey){
+      shibZPlayFromBeginning();
+      return;
+    }
+    if(e.shiftKey){
+      shibZReplay();
+      return;
+    }
     if(isPlaying) shibZPause(); else shibZPlay();
     return;
   }
@@ -2579,6 +2625,14 @@ document.addEventListener('keydown', e=>{
       return;
     }
     if(!isPlaying) shibZRetagSelected(kind);
+    return;
+  }
+
+  const digitKind = shibZKindFromDigit(e);
+  if(digitKind){
+    e.preventDefault();
+    if(e.repeat) return;
+    if(!isPlaying) shibZAssignSelectedKind(digitKind);
     return;
   }
 
