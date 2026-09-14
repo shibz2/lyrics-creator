@@ -480,7 +480,7 @@ const EXTERNAL_MIN_DURATION = 60;
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 16;
 const MP3_TXXX_DESC = 'shibZ.taps';
-const APP_VERSION = 'v12';
+const APP_VERSION = 'v13';
 const GITHUB_TAGS_URL = 'https://api.github.com/repos/shibz2/lyrics-creator/tags?per_page=40';
 const RESERVED_CODES = new Set([
   'Space','Backspace','Enter','NumpadEnter','Tab','Escape','CapsLock','ControlLeft','ControlRight',
@@ -1807,7 +1807,8 @@ function shibZStripLyricsMarkers(raw){
 }
 
 function shibZDisplayLyrics(raw){
-  const text = shibZStripLyricsMarkers(raw);
+  let text = shibZStripLyricsMarkers(raw);
+  text = text.replace(/\s*X\s*/g, '\n');
   return showLyricsSeparator ? text : text.replace(/\|/g, '');
 }
 
