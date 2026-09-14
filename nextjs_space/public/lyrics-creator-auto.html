@@ -23,6 +23,17 @@ header{display:grid;grid-template-columns:56px 1fr 56px;align-items:center;paddi
 header h1{font-size:1.75rem;font-weight:700;letter-spacing:-.02em}
 header h1 span{color:var(--accent)}
 header p{color:var(--text-dim);font-size:.85rem;margin-top:4px}
+.settings-gear{justify-self:end;width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--border);background:var(--surface2);color:var(--text);border-radius:10px;cursor:pointer}
+.settings-gear:hover{border-color:var(--accent);color:#fff}
+.settings-gear svg{display:block}
+.settings-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:70;display:none}
+.settings-backdrop.show{display:block}
+.settings-panel{position:fixed;top:76px;right:16px;width:min(540px,calc(100vw - 24px));max-height:calc(100vh - 92px);overflow:auto;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px 18px;z-index:71;display:none;box-shadow:0 16px 40px rgba(0,0,0,.45)}
+.settings-panel.show{display:block}
+.settings-panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.settings-panel-head h2{margin:0;font-size:1rem;font-weight:600}
+.settings-close{width:36px;height:36px;border:1px solid var(--border);background:var(--surface2);color:var(--text);border-radius:8px;font-size:1.35rem;line-height:1;cursor:pointer}
+.settings-close:hover{border-color:var(--accent)}
 
 section{background:var(--surface);border-radius:12px;padding:20px 24px;margin-top:18px}
 section h2{font-size:1rem;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px}
@@ -119,7 +130,8 @@ section h2 .icon{font-size:1.1rem}
 .form-grid input,.form-grid textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:.85rem;font-family:inherit;resize:vertical}
 .form-grid textarea{min-height:60px}
 .btn{padding:10px 24px;border:none;border-radius:8px;font-size:.85rem;font-weight:600;cursor:pointer;transition:transform .1s,box-shadow .15s}
-.btn:disabled{opacity:.55;cursor:wait}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+.btn[aria-busy="true"]{cursor:wait}
 .btn:active{transform:scale(.97)}
 .btn-accent{background:var(--accent);color:#fff}
 .btn-accent:hover{box-shadow:0 0 18px rgba(124,108,255,.45)}
@@ -150,12 +162,6 @@ section h2 .icon{font-size:1.1rem}
 #copy-lyrics-confirm{font-size:.82rem;color:var(--green);display:none}
 .page-switch{margin-top:8px;font-size:.78rem}
 
-#settings-section details{border:none}
-#settings-section summary{cursor:pointer;font-size:1rem;font-weight:600;list-style:none;display:flex;align-items:center;gap:8px}
-#settings-section summary::-webkit-details-marker{display:none}
-#settings-section summary::before{content:'▸';color:var(--accent);display:inline-block;transition:transform .15s}
-#settings-section details[open] summary::before{transform:rotate(90deg)}
-#settings-section .settings-body{margin-top:16px}
 .setting-help{font-size:.75rem;color:var(--text-dim);margin:-4px 0 12px 0}
 .legend{margin-top:18px}
 .legend h3{font-size:.9rem;font-weight:600;margin-bottom:10px}
@@ -167,7 +173,9 @@ section h2 .icon{font-size:1.1rem}
   .form-grid{grid-template-columns:1fr}
   #waveform-canvas,#waveform-inner{height:120px}
   section{padding:16px}
-  header{grid-template-columns:40px 1fr;gap:8px}
+  header{grid-template-columns:40px 1fr 40px;gap:8px}
+  .settings-gear{width:36px;height:36px}
+  .settings-panel{top:64px;right:12px}
   .site-logo img{height:36px;width:36px}
   #phrase-table{min-width:32rem}
   #phrase-table .col-phrase{width:3rem}
@@ -190,6 +198,9 @@ section h2 .icon{font-size:1.1rem}
       <h1>Precise Lyrics <span>Creator</span></h1>
       <p>Upload a track or listen on another device, tap syllables, then generate lyrics from this page.</p>
     </div>
+    <button type="button" class="settings-gear" id="settings-btn" aria-label="Settings" aria-expanded="false" aria-controls="settings-panel" title="Settings">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.48.48 0 0 0 .11-.63l-1.92-3.32a.5.5 0 0 0-.61-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96a.5.5 0 0 0-.61.22L2.66 8.79a.48.48 0 0 0 .11.63l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58a.48.48 0 0 0-.11.63l1.92 3.32c.14.24.43.34.61.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.26.42.5.42h3.84c.24 0 .45-.18.5-.42l.36-2.54c.59-.24 1.12-.56 1.62-.94l2.39.96c.18.12.47.02.61-.22l1.92-3.32a.48.48 0 0 0-.11-.63l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></svg>
+    </button>
   </header>
 
   <section id="upload-section">
@@ -260,7 +271,7 @@ section h2 .icon{font-size:1.1rem}
         <button type="button" class="btn btn-ghost" id="export-btn">Export taps</button>
         <button type="button" class="btn btn-ghost" id="export-mp3-btn" hidden>Export MP3 with metadata</button>
         <button type="button" class="btn btn-ghost" id="import-btn">Import taps</button>
-        <button type="button" class="btn btn-accent" id="generate-btn-bar">Generate lyrics</button>
+        <button type="button" class="btn btn-accent" id="generate-btn-bar" disabled>Generate lyrics</button>
       </div>
       <span id="io-status"></span>
     </div>
@@ -292,7 +303,7 @@ section h2 .icon{font-size:1.1rem}
       <div><label for="lang-input">Target Language</label><input type="text" id="lang-input" value="English" placeholder="e.g. Spanish, Japanese, English…"></div>
       <div><label for="style-input">Style / Mood (optional)</label><input type="text" id="style-input" value="romantic" placeholder="e.g. romantic ballad, upbeat pop…"></div>
       <div class="full" style="display:flex;gap:10px;flex-wrap:wrap">
-        <button type="button" class="btn btn-accent" id="generate-btn">Generate lyrics</button>
+        <button type="button" class="btn btn-accent" id="generate-btn" disabled>Generate lyrics</button>
         <span id="generate-status"></span>
       </div>
     </div>
@@ -308,10 +319,13 @@ section h2 .icon{font-size:1.1rem}
     <textarea id="lyrics-output" placeholder="Generated lyrics will appear here…"></textarea>
   </section>
 
-  <section id="settings-section">
-    <details>
-      <summary>Settings</summary>
-      <div class="settings-body">
+  <div id="settings-backdrop" class="settings-backdrop"></div>
+  <div id="settings-panel" class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <div class="settings-panel-head">
+      <h2 id="settings-title">Settings</h2>
+      <button type="button" class="settings-close" id="settings-close" aria-label="Close settings">&times;</button>
+    </div>
+    <div class="settings-body">
         <div class="slider-row">
           <label>Enter starts the next line with a tap:</label>
           <button type="button" class="btn btn-ghost btn-toggle on" id="enter-tap-toggle" aria-pressed="true">Enabled</button>
@@ -348,9 +362,8 @@ section h2 .icon{font-size:1.1rem}
             <tr><td>Wheel on waveform</td><td>Zoom in / out · Shift+wheel scrolls sideways</td></tr>
           </table>
         </div>
-      </div>
-    </details>
-  </section>
+    </div>
+  </div>
 
   <div id="confirm-overlay" class="confirm-overlay">
     <div class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="confirm-text">
@@ -426,6 +439,8 @@ let replayFlashAt = 0;
 let replayFlashTimer = null;
 let lastHighlightKey = '';
 let lyricsRaw = '';
+let lyricsGeneratedOnce = false;
+let generateBusy = false;
 let selectedTap = null;
 
 const uploadZone = document.getElementById('upload-zone');
@@ -488,6 +503,10 @@ const confirmOverlay = document.getElementById('confirm-overlay');
 const confirmText = document.getElementById('confirm-text');
 const confirmYes = document.getElementById('confirm-yes');
 const confirmNo = document.getElementById('confirm-no');
+const settingsBtn = document.getElementById('settings-btn');
+const settingsPanel = document.getElementById('settings-panel');
+const settingsClose = document.getElementById('settings-close');
+const settingsBackdrop = document.getElementById('settings-backdrop');
 const speedButtons = Array.from(document.querySelectorAll('.speed-btn'));
 
 const PHRASE_COLORS = ['#7c6cff','#ff6ca8','#4ade80','#ffaa44','#60b5ff','#ff9898','#a19ad3','#80d8c3','#ff5555','#f0e060'];
@@ -1562,6 +1581,7 @@ function shibZUpdatePhraseTable(){
   if(gotoFirstTapBtn) gotoFirstTapBtn.disabled = taps.length===0;
   if(exportBtn) exportBtn.disabled = taps.length===0;
   shibZSyncExportMp3Btn();
+  shibZSyncGenerateButtons();
   shibZSyncPhraseOrderBtn();
   if(phrases.length===0){
     phraseTbody.innerHTML='<tr><td colspan="6" style="color:var(--text-dim);text-align:center">No taps recorded yet</td></tr>';
@@ -1680,6 +1700,24 @@ function shibZCloseConfirm(){
   confirmOverlay.removeAttribute('data-action');
 }
 
+function shibZOpenSettings(){
+  if(!settingsPanel) return;
+  settingsPanel.classList.add('show');
+  if(settingsBackdrop) settingsBackdrop.classList.add('show');
+  if(settingsBtn) settingsBtn.setAttribute('aria-expanded', 'true');
+}
+
+function shibZCloseSettings(){
+  if(settingsPanel) settingsPanel.classList.remove('show');
+  if(settingsBackdrop) settingsBackdrop.classList.remove('show');
+  if(settingsBtn) settingsBtn.setAttribute('aria-expanded', 'false');
+}
+
+function shibZToggleSettings(){
+  if(settingsPanel && settingsPanel.classList.contains('show')) shibZCloseSettings();
+  else shibZOpenSettings();
+}
+
 function shibZOpenConfirm(action, message){
   if(!confirmOverlay || !confirmText){
     if(window.confirm(message)) shibZHandleConfirmAction(action);
@@ -1714,6 +1752,7 @@ function shibZClearAndStartOver(){
   selectedTap = null;
   if(externalMode) externalDuration = EXTERNAL_MIN_DURATION;
   lyricsRaw = '';
+  lyricsGeneratedOnce = false;
   if(lyricsOutput) lyricsOutput.value = '';
   try { localStorage.removeItem(GENERATED_KEY); } catch(e){}
   if(copyLyricsConfirm) copyLyricsConfirm.style.display = 'none';
@@ -1727,6 +1766,7 @@ function shibZClearAndStartOver(){
 
 function shibZHandleConfirmAction(action, tap){
   if(action === 'clear-start') shibZClearAndStartOver();
+  else if(action === 'regenerate-lyrics') shibZGenerate();
   else if(action === 'delete-tap' && isFinite(tap)) shibZRemoveTapAt(tap);
 }
 
@@ -2076,6 +2116,9 @@ if(confirmOverlay){
     if(e.target===confirmOverlay) shibZCloseConfirm();
   });
 }
+if(settingsBtn) settingsBtn.addEventListener('click', shibZToggleSettings);
+if(settingsClose) settingsClose.addEventListener('click', shibZCloseSettings);
+if(settingsBackdrop) settingsBackdrop.addEventListener('click', shibZCloseSettings);
 
 function shibZSpawnRipple(atTime){
   if(!shibZHasTimeline()) return;
@@ -2124,6 +2167,13 @@ document.addEventListener('keydown', e=>{
       if(!e.repeat) confirmYes?.click();
     } else if(e.code==='Space'){
       e.preventDefault();
+    }
+    return;
+  }
+  if(settingsPanel?.classList.contains('show')){
+    if(e.code==='Escape'){
+      e.preventDefault();
+      shibZCloseSettings();
     }
     return;
   }
@@ -2217,27 +2267,49 @@ function shibZSetGenerateStatus(msg, kind){
   generateStatus.className = kind || '';
 }
 
-function shibZSetGenerateBusy(busy){
+function shibZHasExistingLyrics(){
+  if(lyricsGeneratedOnce) return true;
+  const text = (lyricsRaw || (lyricsOutput && lyricsOutput.value) || '');
+  return text.trim().length > 0;
+}
+
+function shibZSyncGenerateButtons(){
+  const label = shibZHasExistingLyrics() ? 'Re-Generate Lyrics' : 'Generate lyrics';
   [generateBtn, generateBtnBar].forEach(btn=>{
     if(!btn) return;
-    btn.disabled = !!busy;
+    btn.textContent = label;
+    btn.disabled = generateBusy || taps.length===0;
+    if(generateBusy) btn.setAttribute('aria-busy', 'true');
+    else btn.removeAttribute('aria-busy');
   });
 }
 
-function shibZRestoreGenerated(){
-  try {
-    const saved = localStorage.getItem(GENERATED_KEY);
-    if(typeof saved === 'string' && lyricsOutput){
-      lyricsRaw = shibZStripLyricsMarkers(saved);
-      lyricsOutput.value = shibZDisplayLyrics(lyricsRaw);
-    }
-  } catch(e){}
+function shibZSetGenerateBusy(busy){
+  generateBusy = !!busy;
+  shibZSyncGenerateButtons();
+}
+
+function shibZClearGeneratedOnLoad(){
+  lyricsRaw = '';
+  lyricsGeneratedOnce = false;
+  if(lyricsOutput) lyricsOutput.value = '';
+  try { localStorage.removeItem(GENERATED_KEY); } catch(e){}
 }
 
 function shibZStoreGenerated(raw){
   lyricsRaw = shibZStripLyricsMarkers(raw || '');
+  lyricsGeneratedOnce = true;
   if(lyricsOutput) lyricsOutput.value = shibZDisplayLyrics(lyricsRaw);
   try { localStorage.setItem(GENERATED_KEY, lyricsRaw); } catch(e){}
+}
+
+function shibZRequestGenerate(){
+  if(generateBusy || taps.length===0) return;
+  if(shibZHasExistingLyrics()){
+    shibZOpenConfirm('regenerate-lyrics', 'Existing lyrics will be replaced. Continue?');
+    return;
+  }
+  shibZGenerate();
 }
 
 async function shibZCopyLyrics(){
@@ -2320,8 +2392,8 @@ async function shibZGenerate(){
   }
 }
 
-generateBtn.addEventListener('click', shibZGenerate);
-if(generateBtnBar) generateBtnBar.addEventListener('click', shibZGenerate);
+generateBtn.addEventListener('click', shibZRequestGenerate);
+if(generateBtnBar) generateBtnBar.addEventListener('click', shibZRequestGenerate);
 if(copyLyricsBtn) copyLyricsBtn.addEventListener('click', shibZCopyLyrics);
 lyricsOutput.addEventListener('input', ()=>{
   if(lyricsOutput.value.includes('|')){
@@ -2441,7 +2513,8 @@ if(tapLineBtn){
 }
 
 shibZApplyPrefs();
-shibZRestoreGenerated();
+shibZClearGeneratedOnLoad();
+shibZSyncGenerateButtons();
 const saved = shibZReadSession();
 if(saved && typeof saved.playbackRate === 'number'){
   shibZSetSpeed(saved.playbackRate, false);
