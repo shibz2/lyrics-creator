@@ -9,8 +9,8 @@ const jakartaSans = Plus_Jakarta_Sans({ subsets: ['latin'], variable: '--font-di
 const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono' })
 
 export const metadata = {
-  title: 'Lyrics Creator',
-  description: 'Tap syllables to a track and build an AI lyric prompt.',
+  title: 'Precise Lyrics Creator',
+  description: 'Tap syllables to a track and generate lyrics.',
 }
 
 export default function RootLayout({

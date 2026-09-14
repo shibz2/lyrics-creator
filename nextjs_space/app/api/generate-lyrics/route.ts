@@ -2,90 +2,77 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export const runtime = 'nodejs'
 
-const DEFAULT_MODEL = 'openrouter/free'
-const SITE_URL = 'https://lyrics.shibz.uk'
-const SITE_TITLE = 'Lyrics Creator Auto'
-const FREE_MAX_PRICE = { prompt: 0, completion: 0, request: 0 }
+const HARD_DEFAULT_MODEL = 'gemini-3.5-flash-lite'
+const SYSTEM_PROMPT =
+  'You are a lyricist. Follow the user prompt exactly. Output ONLY the lyrics between <<<LYRICS and >>>. No titles, numbering, comments, or markdown.'
 
 type Body = {
   prompt?: unknown
-  model?: unknown
-  apiKey?: unknown
 }
 
-function shibZIsFreeOpenRouterModel(id: string) {
-  return id === 'openrouter/free' || id.endsWith(':free')
+function shibZEnvModel() {
+  const raw = typeof process.env.AI_SUB_MODEL === 'string' ? process.env.AI_SUB_MODEL.trim() : ''
+  return shibZIsGeminiModel(raw) ? raw : ''
 }
 
-function shibZRequireFreeModel(raw: string) {
-  const model = raw.trim()
-  if (shibZIsFreeOpenRouterModel(model)) return model
-  return DEFAULT_MODEL
+function shibZDefaultModel() {
+  return shibZEnvModel() || HARD_DEFAULT_MODEL
 }
 
-function shibZErrorMessage(data: unknown, status: number) {
-  if (data && typeof data === 'object') {
-    const err = (data as { error?: unknown }).error
-    if (typeof err === 'string' && err.trim()) return err
-    if (err && typeof err === 'object') {
-      const message = (err as { message?: unknown }).message
-      if (typeof message === 'string' && message.trim()) return message
-    }
-  }
-  return `OpenRouter request failed (${status})`
+function shibZIsGeminiModel(id: string) {
+  return /^gemini-[a-z0-9.-]+$/i.test((id || '').trim())
 }
 
-function shibZMessageText(content: unknown) {
-  if (typeof content === 'string') return content
-  if (Array.isArray(content)) {
-    return content
-      .map((part) => {
-        if (typeof part === 'string') return part
-        if (part && typeof part === 'object' && typeof (part as { text?: unknown }).text === 'string') {
-          return (part as { text: string }).text
-        }
-        return ''
-      })
-      .join('')
-  }
-  return ''
+function shibZGeminiText(data: unknown) {
+  if (!data || typeof data !== 'object') return ''
+  const candidates = (data as { candidates?: unknown }).candidates
+  if (!Array.isArray(candidates) || !candidates[0] || typeof candidates[0] !== 'object') return ''
+  const content = (candidates[0] as { content?: { parts?: unknown } }).content
+  const parts = content && Array.isArray(content.parts) ? content.parts : []
+  return parts
+    .map((part) => {
+      if (part && typeof part === 'object' && typeof (part as { text?: unknown }).text === 'string') {
+        return (part as { text: string }).text
+      }
+      return ''
+    })
+    .join('')
 }
 
-async function shibZCallOpenRouter(apiKey: string, model: string, prompt: string) {
-  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': SITE_URL,
-      'X-OpenRouter-Title': SITE_TITLE,
-      'X-Title': SITE_TITLE,
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0.8,
-      max_tokens: 2048,
-      provider: { max_price: FREE_MAX_PRICE },
-      messages: [
-        {
-          role: 'system',
-          content:
-            'You are a lyricist. Follow the user prompt exactly. Output only the lyrics, one line per phrase, with every syllable separated by |. No commentary.',
+async function shibZCallGemini(apiKey: string, model: string, prompt: string) {
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
+      },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.8,
+          maxOutputTokens: 2048,
         },
-        { role: 'user', content: prompt },
-      ],
-    }),
-  })
+      }),
+    }
+  )
   const data = await res.json().catch(() => ({}))
   if (!res.ok) {
-    throw new Error(shibZErrorMessage(data, res.status))
+    throw new Error('Generation failed.')
   }
-  const text = shibZMessageText(data?.choices?.[0]?.message?.content)
+  const text = shibZGeminiText(data)
   if (!text.trim()) {
-    throw new Error('The model returned empty lyrics.')
+    throw new Error('Generation failed.')
   }
-  const usedModel = typeof data?.model === 'string' && data.model.trim() ? data.model.trim() : model
-  return { lyrics: text.trim(), model: usedModel }
+  return { lyrics: text.trim() }
+}
+
+export async function GET() {
+  return NextResponse.json({
+    ready: Boolean(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY),
+  })
 }
 
 export async function POST(req: NextRequest) {
@@ -104,36 +91,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Prompt is too long.' }, { status: 400 })
   }
 
-  const requested =
-    typeof body.model === 'string' && body.model.trim() ? body.model.trim() : DEFAULT_MODEL
-  if (!shibZIsFreeOpenRouterModel(requested)) {
-    return NextResponse.json(
-      {
-        error:
-          'Only OpenRouter free models are allowed. Use openrouter/free or a model id ending in :free.',
-      },
-      { status: 400 }
-    )
-  }
-  const model = shibZRequireFreeModel(requested)
-
-  const userKey = typeof body.apiKey === 'string' ? body.apiKey.trim() : ''
-  const apiKey = userKey || process.env.OPENROUTER_API_KEY || ''
+  const model = shibZDefaultModel()
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || ''
   if (!apiKey) {
-    return NextResponse.json(
-      {
-        error:
-          'No API key. Add an OpenRouter key in Settings, or set OPENROUTER_API_KEY for the server.',
-      },
-      { status: 400 }
-    )
+    return NextResponse.json({ error: 'Lyrics generation is not configured.' }, { status: 400 })
   }
 
   try {
-    const result = await shibZCallOpenRouter(apiKey, model, prompt)
-    return NextResponse.json(result)
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Generation failed.'
-    return NextResponse.json({ error: message }, { status: 502 })
+    const result = await shibZCallGemini(apiKey, model, prompt)
+    return NextResponse.json({ lyrics: result.lyrics })
+  } catch {
+    return NextResponse.json({ error: 'Generation failed.' }, { status: 502 })
   }
 }

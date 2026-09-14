@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
 
 export default function Home() {
-  redirect('/lyrics-creator.html')
+  redirect('/lyrics-creator-auto.html')
 }
