@@ -145,7 +145,6 @@ section h2 .icon{font-size:1.1rem}
 .lyrics-toolbar label{margin:0;font-size:.78rem;color:var(--text-dim)}
 #copy-lyrics-confirm{font-size:.82rem;color:var(--green);display:none}
 .page-switch{margin-top:8px;font-size:.78rem}
-.page-switch a{font-weight:600}
 
 #settings-section details{border:none}
 #settings-section summary{cursor:pointer;font-size:1rem;font-weight:600;list-style:none;display:flex;align-items:center;gap:8px}
@@ -186,7 +185,6 @@ section h2 .icon{font-size:1.1rem}
     <div class="header-copy">
       <h1>Precise Lyrics <span>Creator</span></h1>
       <p>Upload a track or listen on another device, tap syllables, then generate lyrics from this page.</p>
-      <p class="page-switch"><a href="lyrics-creator.html">Switch to prompt-only version</a></p>
     </div>
   </header>
 
@@ -198,7 +196,6 @@ section h2 .icon{font-size:1.1rem}
       <p class="privacy-note">Your audio stays in this browser tab’s memory only. It is never uploaded, never sent to a server, and never stored. The file never leaves your computer.</p>
       <button type="button" class="btn-pick" id="pick-btn">Choose File</button>
       <input type="file" id="file-input" accept="audio/mpeg,audio/wav,audio/mp3,audio/wave,audio/*">
-      <input type="file" id="tap-import-input" accept="application/json,.json">
       <div class="data-actions" style="justify-content:center;margin-top:16px">
         <button type="button" class="btn btn-ghost" id="import-btn-upload">Import taps</button>
       </div>
@@ -209,6 +206,7 @@ section h2 .icon{font-size:1.1rem}
       <p>Listen on another device. Play starts a timer here so you can tap syllables as usual. Replay flashes those taps with no audio.</p>
     </div>
   </section>
+  <input type="file" id="tap-import-input" accept="application/json,.json">
 
   <section id="player-section">
     <h2><span class="icon">🎚️</span> Player &amp; Tap Mode</h2>
@@ -281,7 +279,7 @@ section h2 .icon{font-size:1.1rem}
   </section>
 
   <section id="prompt-section">
-    <h2><span class="icon">✍️</span> Generate Lyrics</h2>
+    <h2>Generate Lyrics</h2>
     <div class="form-grid">
       <div><label for="lang-input">Target Language</label><input type="text" id="lang-input" value="English" placeholder="e.g. Spanish, Japanese, English…"></div>
       <div><label for="style-input">Style / Mood (optional)</label><input type="text" id="style-input" value="romantic" placeholder="e.g. romantic ballad, upbeat pop…"></div>
@@ -812,6 +810,7 @@ function shibZNormalizeImported(data){
       style: typeof data.style === 'string' ? data.style : styleInput.value,
       extra: '',
       externalMode: !!data.externalMode || data.fileName === EXTERNAL_FILE_NAME,
+      duration: typeof data.duration === 'number' ? data.duration : undefined,
       externalDuration: typeof data.externalDuration === 'number' ? data.externalDuration : undefined
     };
   }
@@ -828,8 +827,30 @@ function shibZNormalizeImported(data){
     style: typeof data.style === 'string' ? data.style : '',
     extra: typeof data.extra === 'string' ? data.extra : '',
     externalMode: !!data.externalMode || data.fileName === EXTERNAL_FILE_NAME,
+    duration: typeof data.duration === 'number' ? data.duration : undefined,
     externalDuration: typeof data.externalDuration === 'number' ? data.externalDuration : undefined
   };
+}
+
+function shibZApplyImportedTaps(session){
+  taps = session.taps;
+  manualBreaks = session.manualBreaks;
+  selectedTap = null;
+  if(typeof session.gapThreshold === 'number'){
+    gapThreshold = session.gapThreshold;
+    if(gapSlider) gapSlider.value = String(gapThreshold);
+    if(gapVal) gapVal.textContent = gapThreshold.toFixed(1)+'s';
+  }
+  if(typeof session.playbackRate === 'number'){
+    shibZSetSpeed(session.playbackRate, false);
+  }
+  const importedDur = [session.duration, session.externalDuration].find(n => typeof n === 'number' && n > 0);
+  if(typeof importedDur === 'number'){
+    externalDuration = Math.max(EXTERNAL_MIN_DURATION, importedDur);
+  }
+  if(taps.length){
+    externalDuration = Math.max(externalDuration, Math.ceil((Math.max(...taps)+8)/30)*30);
+  }
 }
 
 function shibZImportPayload(data){
@@ -851,19 +872,11 @@ function shibZImportPayload(data){
     );
   }
   shibZSavePrefs();
+  shibZPause();
+  shibZApplyImportedTaps(session);
 
-  if(audioBuffer || externalMode){
-    shibZPause();
-    taps = session.taps;
-    manualBreaks = session.manualBreaks;
-    if(typeof session.gapThreshold === 'number'){
-      gapThreshold = session.gapThreshold;
-      gapSlider.value = String(gapThreshold);
-      gapVal.textContent = gapThreshold.toFixed(1)+'s';
-    }
-    if(typeof session.playbackRate === 'number'){
-      shibZSetSpeed(session.playbackRate, false);
-    }
+  if(audioBuffer){
+    shibZLayoutWaveform();
     shibZUpdatePhraseTable();
     shibZSaveSession();
     const mismatch = session.fileName && currentFileName && session.fileName !== currentFileName;
@@ -871,26 +884,35 @@ function shibZImportPayload(data){
     return;
   }
 
-  currentFileName = session.fileName || currentFileName;
-  taps = session.taps;
-  manualBreaks = session.manualBreaks;
-  if(typeof session.gapThreshold === 'number') gapThreshold = session.gapThreshold;
-  if(typeof session.playbackRate === 'number') playbackRate = session.playbackRate;
-  if(session.externalMode || session.fileName === EXTERNAL_FILE_NAME){
-    shibZStartExternalMode();
-    shibZIoStatus('Imported '+taps.length+' taps for external audio.');
+  currentFileName = session.fileName || currentFileName || EXTERNAL_FILE_NAME;
+  shibZStartExternalMode();
+  shibZIoStatus('Imported '+taps.length+' taps.');
+}
+
+function shibZIsTapsJsonFile(file){
+  if(!file) return false;
+  const name = (file.name || '').toLowerCase();
+  const type = (file.type || '').toLowerCase();
+  return name.endsWith('.json') || type.includes('json');
+}
+
+async function shibZImportFile(file){
+  if(!file) return;
+  if(!shibZIsTapsJsonFile(file)){
+    shibZIoStatus('Import expects a .json taps file.', true);
     return;
   }
-  shibZSaveSession();
-  shibZRefreshSessionHint();
-  if(sessionHint){
-    sessionHint.style.display = 'block';
-    sessionHint.textContent = 'Imported '+taps.length+' taps'+(session.fileName ? ' for '+session.fileName : '')+'. Drop the matching audio file, or continue without a file.';
+  try {
+    const text = await file.text();
+    shibZImportPayload(JSON.parse(text));
+  } catch(err){
+    shibZIoStatus('Could not read that JSON file.', true);
   }
-  shibZIoStatus('Imported '+taps.length+' taps. Upload audio or continue without a file.');
 }
 
 function shibZOpenImportPicker(){
+  if(!tapImportInput) return;
+  tapImportInput.accept = 'application/json,.json';
   tapImportInput.click();
 }
 
@@ -917,6 +939,7 @@ changeFileBtn.addEventListener('click', shibZOpenPicker);
 uploadZone.addEventListener('click', e=>{
   if(e.target === pickBtn) return;
   if(e.target.closest('#import-btn-upload')) return;
+  if(e.target.id === 'tap-import-input' || e.target.closest('#tap-import-input')) return;
   shibZOpenPicker();
 });
 uploadZone.addEventListener('dragover', e=>{e.preventDefault();uploadZone.classList.add('dragover')});
@@ -924,7 +947,9 @@ uploadZone.addEventListener('dragleave', ()=>uploadZone.classList.remove('dragov
 uploadZone.addEventListener('drop', e=>{
   e.preventDefault();uploadZone.classList.remove('dragover');
   const f=e.dataTransfer?.files?.[0];
-  if(f) shibZLoadFile(f);
+  if(!f) return;
+  if(shibZIsTapsJsonFile(f)) shibZImportFile(f);
+  else shibZLoadFile(f);
 });
 fileInput.addEventListener('change', ()=>{
   const f=fileInput?.files?.[0];
@@ -2054,12 +2079,7 @@ tapImportInput.addEventListener('change', async ()=>{
   const f=tapImportInput.files?.[0];
   tapImportInput.value='';
   if(!f) return;
-  try {
-    const text=await f.text();
-    shibZImportPayload(JSON.parse(text));
-  } catch(err){
-    shibZIoStatus('Could not read that JSON file.', true);
-  }
+  await shibZImportFile(f);
 });
 
 ;[langInput, styleInput].forEach(el=>{
