@@ -1,0 +1,10 @@
+---
+description: Maintain only Precise Lyrics Creator; ignore the archived prompt-only page.
+alwaysApply: true
+---
+
+# Studio page
+
+The live studio is `nextjs_space/public/lyrics-creator-auto.html` only.
+
+Do not edit, sync, or extend `backup/old/lyrics-creator.html` (archived prompt-only page). `/lyrics-creator.html` redirects to the auto studio.

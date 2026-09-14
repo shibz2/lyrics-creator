@@ -109,6 +109,11 @@ section h2 .icon{font-size:1.1rem}
 #phrase-table .phrase-visual{display:block;width:100%;height:auto;aspect-ratio:320/40;color:var(--text);overflow:visible}
 #phrase-table .phrase-visual.has-lyrics{width:100%}
 #phrase-table .phrase-visual.mismatch text{fill:var(--orange)}
+#phrase-table .phrase-visual.verify-bad .tap-lyric.ok{fill:inherit}
+#phrase-table .lyric-miss-slot,#phrase-table .lyric-extra-bg{fill:rgba(255,85,85,.28);stroke:var(--red);stroke-width:1.15;pointer-events:none}
+#phrase-table .tap-lyric.extra{fill:#ffb4b4;font-weight:700}
+#phrase-table .count-mismatch{color:var(--red);font-weight:700}
+#phrase-table tr.verify-mismatch td,#phrase-table tr.verify-extra td{background:rgba(255,85,85,.06)}
 #phrase-table .tap-dot,#phrase-table .tap-hit{cursor:pointer}
 #phrase-table .tap-dot.kind-s,#phrase-table .tap-dot.kind-l,#phrase-table .tap-dot.kind-u{cursor:pointer}
 #phrase-table .tap-dot.played{filter:brightness(1.35)}
@@ -165,6 +170,7 @@ section h2 .icon{font-size:1.1rem}
 #tap-import-input{display:none}
 #lyrics-output{width:100%;min-height:140px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;color:var(--text-dim);font-family:'SF Mono',Consolas,monospace;font-size:.78rem;margin-top:12px;resize:vertical}
 #lyrics-output{color:var(--text);min-height:180px}
+#lyrics-output.verify-bad{border-color:var(--red)}
 #generate-status{font-size:.82rem;align-self:center}
 #generate-status.error{color:var(--red)}
 #generate-status.ok{color:var(--green)}
@@ -173,7 +179,14 @@ section h2 .icon{font-size:1.1rem}
 .lyrics-sep-toggle{display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none}
 .lyrics-sep-toggle input{accent-color:var(--accent);margin:0}
 #copy-lyrics-confirm{font-size:.82rem;color:var(--green);display:none}
-.page-switch{margin-top:8px;font-size:.78rem}
+.lyrics-verify-view{display:none;margin-top:12px;padding:12px;border:1px solid rgba(255,85,85,.45);border-radius:8px;background:rgba(255,85,85,.06);font-family:'SF Mono',Consolas,monospace;font-size:.78rem;line-height:1.7;color:var(--text)}
+.lyrics-verify-view.show{display:block}
+.lyrics-verify-view .verify-label{margin:0 0 8px;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-size:.75rem;color:var(--red);font-weight:600}
+.lyrics-verify-view .verify-line{margin:0 0 6px}
+.lyrics-verify-view .verify-x{color:var(--accent);font-weight:700}
+.lyrics-verify-view .ok{color:var(--text)}
+.lyrics-verify-view .extra{background:rgba(255,85,85,.38);color:#ffd6d6;border-radius:3px;padding:0 4px;box-shadow:inset 0 0 0 1px var(--red)}
+.lyrics-verify-view .miss{display:inline-block;min-width:1.15em;height:1.05em;margin:0 1px;border:1px solid var(--red);background:rgba(255,85,85,.28);border-radius:3px;vertical-align:-.15em}
 #debug-io{display:none}
 #debug-io.show{display:block}
 #debug-io textarea{width:100%;min-height:88px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;color:var(--text);font-family:'SF Mono',Consolas,monospace;font-size:.78rem;margin:4px 0 12px;resize:vertical}
@@ -343,6 +356,7 @@ section h2 .icon{font-size:1.1rem}
       <span id="copy-lyrics-confirm">Copied!</span>
     </div>
     <textarea id="lyrics-output" placeholder="Generated lyrics will appear here…"></textarea>
+    <div id="lyrics-verify-view" class="lyrics-verify-view" hidden></div>
   </section>
 
   <section id="debug-io">
@@ -365,6 +379,11 @@ section h2 .icon{font-size:1.1rem}
           <button type="button" class="btn btn-ghost btn-toggle on" id="enter-tap-toggle" aria-pressed="true">Enabled</button>
         </div>
         <p class="setting-help">When enabled, Enter records a syllable and starts the next lyric line with that tap. When disabled, Enter only starts the next line.</p>
+        <div class="slider-row">
+          <label>Verify lyrics:</label>
+          <button type="button" class="btn btn-ghost btn-toggle" id="verify-lyrics-toggle" aria-pressed="false">Disabled</button>
+        </div>
+        <p class="setting-help">When enabled, checks that generated lyrics match the rhythm pattern. Extra or missing syllables are marked in red. Off by default.</p>
         <div class="slider-row" id="device-skew-row">
           <label for="device-skew-slider">Output / Bluetooth latency:</label>
           <button type="button" class="btn btn-ghost btn-toggle" id="device-skew-toggle" aria-pressed="false">Disabled</button>
@@ -461,7 +480,7 @@ const EXTERNAL_MIN_DURATION = 60;
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 16;
 const MP3_TXXX_DESC = 'shibZ.taps';
-const APP_VERSION = 'v10';
+const APP_VERSION = 'v11';
 const GITHUB_TAGS_URL = 'https://api.github.com/repos/shibz2/lyrics-creator/tags?per_page=40';
 const RESERVED_CODES = new Set([
   'Space','Backspace','Enter','NumpadEnter','Tab','Escape','CapsLock','ControlLeft','ControlRight',
@@ -498,6 +517,7 @@ let zoomLevel = 1;
 let phraseNewestFirst = true;
 let enterTapsNewLine = true;
 let showLyricsSeparator = false;
+let verifyLyrics = false;
 let isReplaying = false;
 let replayFiredUpTo = -1;
 let replayActiveTap = null;
@@ -542,6 +562,7 @@ const generateBtn = document.getElementById('generate-btn');
 const generateBtnBar = document.getElementById('generate-btn-bar');
 const generateStatus = document.getElementById('generate-status');
 const lyricsOutput = document.getElementById('lyrics-output');
+const lyricsVerifyView = document.getElementById('lyrics-verify-view');
 const debugIoSection = document.getElementById('debug-io');
 const debugOutputEl = document.getElementById('debug-output');
 const debugInputEl = document.getElementById('debug-input');
@@ -566,6 +587,7 @@ const deviceSkewSlider = document.getElementById('device-skew-slider');
 const deviceSkewVal = document.getElementById('device-skew-val');
 const deviceSkewToggle = document.getElementById('device-skew-toggle');
 const enterTapToggle = document.getElementById('enter-tap-toggle');
+const verifyLyricsToggle = document.getElementById('verify-lyrics-toggle');
 const deviceSkewRow = document.getElementById('device-skew-row');
 const reactionSkewSlider = document.getElementById('reaction-skew-slider');
 const reactionSkewVal = document.getElementById('reaction-skew-val');
@@ -903,7 +925,8 @@ function shibZSavePrefs(){
       zoomLevel,
       phraseNewestFirst,
       enterTapsNewLine,
-      showLyricsSeparator
+      showLyricsSeparator,
+      verifyLyrics
     }));
   } catch(e){}
 }
@@ -931,6 +954,7 @@ function shibZApplyPrefs(){
   shibZSyncPhraseOrderBtn();
   shibZSetEnterTapsNewLine(typeof prefs.enterTapsNewLine === 'boolean' ? prefs.enterTapsNewLine : true);
   shibZSetShowLyricsSeparator(typeof prefs.showLyricsSeparator === 'boolean' ? prefs.showLyricsSeparator : false, false);
+  shibZSetVerifyLyrics(typeof prefs.verifyLyrics === 'boolean' ? prefs.verifyLyrics : false, false);
 }
 function shibZSaveSession(){
   shibZSavePrefs();
@@ -1803,9 +1827,9 @@ function shibZSplitSyllables(line){
   return String(line||'').split(/[|\s]+/).map(s=>s.trim()).filter(s => s && !/^x$/i.test(s));
 }
 
-function shibZParseLyricLines(raw, phraseCount){
+function shibZParseAllLyricPhrases(raw){
   let text = shibZStripLyricsMarkers(raw);
-  if(!text || phraseCount<1) return Array.from({length:phraseCount}, ()=>[]);
+  if(!text) return [];
   text = text.replace(/^```[a-zA-Z]*\s*/, '').replace(/\s*```$/, '');
   text = text.replace(/\s*X\s*/g, '\n');
   const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(l=>{
@@ -1816,13 +1840,40 @@ function shibZParseLyricLines(raw, phraseCount){
   });
   const piped = lines.filter(l=>l.includes('|'));
   const use = piped.length ? piped : lines;
-  const out = [];
-  for(let i=0;i<phraseCount;i++){
-    const line = use[i] || '';
-    if(!line){ out.push([]); continue; }
-    out.push(shibZSplitSyllables(line));
+  return use.map(line => shibZSplitSyllables(line));
+}
+
+function shibZParseLyricLines(raw, phraseCount){
+  const all = shibZParseAllLyricPhrases(raw);
+  return Array.from({length: Math.max(0, phraseCount)}, (_,i) => all[i] || []);
+}
+
+function shibZLyricsVerifyReport(){
+  const phrases = shibZDetectPhrases();
+  const got = shibZParseAllLyricPhrases(lyricsRaw || lyricsOutput?.value || '');
+  const hasLyrics = got.some(p => p.length);
+  if(!hasLyrics || !phrases.length) return { ok:true, empty:true, phrases, got };
+  let extraSlots = 0, missingSlots = 0;
+  const n = Math.max(phrases.length, got.length);
+  for(let i=0;i<n;i++){
+    const exp = phrases[i]?.length || 0;
+    const act = got[i]?.length || 0;
+    if(act>exp) extraSlots += act-exp;
+    if(act<exp) missingSlots += exp-act;
   }
-  return out;
+  return {
+    ok: extraSlots===0 && missingSlots===0 && got.length===phrases.length,
+    empty:false,
+    extraSlots,
+    missingSlots,
+    phrases,
+    got
+  };
+}
+
+function shibZLyricSlotWidth(text){
+  const n = String(text||'').length;
+  return Math.max(16, Math.min(44, 8 + n*4.6));
 }
 
 function shibZSyncPhraseOrderBtn(){
@@ -1831,18 +1882,28 @@ function shibZSyncPhraseOrderBtn(){
   if(phraseOrderBtn) phraseOrderBtn.setAttribute('aria-pressed', phraseNewestFirst ? 'true' : 'false');
 }
 
-function shibZVisualPhrase(ph, color, syllables){
-  const hasLyrics = Array.isArray(syllables) && syllables.some(s=>s);
-  const W = 320;
+function shibZVisualPhrase(ph, color, syllables, opts){
+  const tapsPh = Array.isArray(ph) ? ph : [];
+  const syl = Array.isArray(syllables) ? syllables : [];
+  const hasLyrics = syl.some(s=>s);
+  const verifyOn = !!(opts && opts.verify);
+  const extraSyl = verifyOn ? syl.slice(tapsPh.length) : [];
   const H = 40;
   const pad = 10;
   const lineY = 10;
-  const start=ph[0], end=ph[ph.length-1];
-  const span=Math.max(end-start, 0.08);
-  const xs=ph.map(t => ph.length===1 ? W/2 : pad+((t-start)/span)*(W-pad*2));
-  let svg=`<line x1="${pad}" y1="${lineY}" x2="${W-pad}" y2="${lineY}" stroke="${color}" stroke-opacity="0.28" stroke-width="2" stroke-linecap="round"/>`;
+  const baseW = 320;
+  let xs = [];
+  if(tapsPh.length){
+    const start=tapsPh[0], end=tapsPh[tapsPh.length-1];
+    const span=Math.max(end-start, 0.08);
+    xs=tapsPh.map(t => tapsPh.length===1 ? baseW/2 : pad+((t-start)/span)*(baseW-pad*2));
+  }
+  const extraStart = xs.length ? xs[xs.length-1] + 24 : pad + 8;
+  const extraXs = extraSyl.map((_, i) => extraStart + i * 30);
+  const W = Math.max(baseW, extraXs.length ? extraXs[extraXs.length-1] + pad + 16 : baseW);
+  let svg=`<line x1="${pad}" y1="${lineY}" x2="${Math.max(pad, W-pad)}" y2="${lineY}" stroke="${color}" stroke-opacity="0.28" stroke-width="2" stroke-linecap="round"/>`;
   for(let i=1;i<xs.length;i++){
-    const gap=ph[i]-ph[i-1];
+    const gap=tapsPh[i]-tapsPh[i-1];
     const ticks=Math.min(6, Math.max(1, Math.round(gap/0.18)));
     for(let k=1;k<=ticks;k++){
       const x=xs[i-1]+(xs[i]-xs[i-1])*(k/(ticks+1));
@@ -1850,26 +1911,112 @@ function shibZVisualPhrase(ph, color, syllables){
     }
   }
   xs.forEach((x, idx)=>{
-    const tapKey = Number(ph[idx]).toFixed(6);
-    svg+=shibZTapShapeSvg(x, lineY, shibZKindAtTap(ph[idx]), color, tapKey);
-    if(hasLyrics && syllables[idx]){
-      svg+=`<text class="tap-lyric" data-tap="${tapKey}" x="${x.toFixed(1)}" y="34" text-anchor="middle" fill="${color}" font-size="9" font-family="Segoe UI,system-ui,sans-serif">${shibZEscXml(syllables[idx])}</text>`;
+    const tapKey = Number(tapsPh[idx]).toFixed(6);
+    if(verifyOn && !syl[idx]){
+      svg+=`<rect class="lyric-miss-slot" x="${(x-10).toFixed(1)}" y="22" width="20" height="16" rx="3"/>`;
+    }
+    svg+=shibZTapShapeSvg(x, lineY, shibZKindAtTap(tapsPh[idx]), color, tapKey);
+    if(syl[idx]){
+      const cls = 'tap-lyric'+(verifyOn?' ok':'');
+      svg+=`<text class="${cls}" data-tap="${tapKey}" x="${x.toFixed(1)}" y="34" text-anchor="middle" fill="${color}" font-size="9" font-family="Segoe UI,system-ui,sans-serif">${shibZEscXml(syl[idx])}</text>`;
     }
   });
-  const gaps=ph.slice(1).map((t,i)=>(t-ph[i]).toFixed(2)+'s');
-  const lyricLine = hasLyrics ? syllables.join(' | ') : '';
-  const label=ph.length===1
+  extraXs.forEach((x, i)=>{
+    const word = extraSyl[i];
+    const bw = shibZLyricSlotWidth(word);
+    svg+=`<rect class="lyric-extra-bg" x="${(x-bw/2).toFixed(1)}" y="22" width="${bw.toFixed(1)}" height="16" rx="3"/>`;
+    svg+=`<text class="tap-lyric extra" x="${x.toFixed(1)}" y="34" text-anchor="middle" font-size="9" font-family="Segoe UI,system-ui,sans-serif">${shibZEscXml(word)}</text>`;
+  });
+  const gaps=tapsPh.slice(1).map((t,i)=>(t-tapsPh[i]).toFixed(2)+'s');
+  const lyricLine = hasLyrics ? syl.join(' | ') : '';
+  const label=tapsPh.length===1
     ? '1 syllable'
-    : ph.length+' syllables, gaps '+gaps.join(', ');
+    : (tapsPh.length ? tapsPh.length+' syllables, gaps '+gaps.join(', ') : extraSyl.length+' extra syllables');
   const fullLabel = lyricLine ? label+' — '+lyricLine : label;
-  const mismatch = hasLyrics && syllables.length !== ph.length;
-  const cls = 'phrase-visual'+(hasLyrics?' has-lyrics':'')+(mismatch?' mismatch':'');
+  const mismatch = hasLyrics && syl.length !== tapsPh.length;
+  const cls = 'phrase-visual'+(hasLyrics?' has-lyrics':'')+(verifyOn && mismatch?' verify-bad':'')+(!verifyOn && mismatch?' mismatch':'');
   return `<div class="visual-frame"><svg class="${cls}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${shibZEscXml(fullLabel)}"><title>${shibZEscXml(fullLabel)}</title>${svg}</svg></div>`;
+}
+
+function shibZRenderVerifyLine(expectedCount, syllables){
+  const got = Array.isArray(syllables) ? syllables : [];
+  const n = Math.max(expectedCount, got.length);
+  const bits = [];
+  for(let k=0;k<n;k++){
+    if(k < expectedCount && k < got.length) bits.push(`<span class="ok">${shibZEscXml(got[k])}</span>`);
+    else if(k < expectedCount) bits.push('<span class="miss" title="Missing syllable"></span>');
+    else bits.push(`<span class="extra">${shibZEscXml(got[k])}</span>`);
+  }
+  const mismatch = got.length !== expectedCount;
+  return `<div class="verify-line${mismatch?' mismatch':''}">${bits.join('<span class="sep"> | </span>')}</div>`;
+}
+
+function shibZSyncLyricsVerifyView(phrases, allLyrics){
+  if(!lyricsVerifyView) return;
+  const canVerify = verifyLyrics && (allLyrics||[]).some(p => p.length) && (phrases||[]).length;
+  if(!canVerify){
+    lyricsVerifyView.hidden = true;
+    lyricsVerifyView.classList.remove('show');
+    lyricsVerifyView.innerHTML = '';
+    if(lyricsOutput) lyricsOutput.classList.remove('verify-bad');
+    return;
+  }
+  const reportOk = phrases.every((ph,i)=> (allLyrics[i]||[]).length === ph.length) && allLyrics.length <= phrases.length;
+  if(reportOk){
+    lyricsVerifyView.hidden = true;
+    lyricsVerifyView.classList.remove('show');
+    lyricsVerifyView.innerHTML = '';
+    if(lyricsOutput) lyricsOutput.classList.remove('verify-bad');
+    return;
+  }
+  const n = Math.max(phrases.length, allLyrics.length);
+  const parts = [];
+  for(let i=0;i<n;i++){
+    parts.push(shibZRenderVerifyLine(phrases[i]?.length || 0, allLyrics[i] || []));
+    if(i < n-1) parts.push('<div class="verify-x">X</div>');
+  }
+  lyricsVerifyView.hidden = false;
+  lyricsVerifyView.classList.add('show');
+  lyricsVerifyView.innerHTML = '<p class="verify-label">Pattern check — extra syllables and missing slots are marked in red</p>'+parts.join('');
+  if(lyricsOutput) lyricsOutput.classList.add('verify-bad');
+}
+
+function shibZSyncVerifyStatus(){
+  if(!verifyLyrics || generateBusy) return;
+  const report = shibZLyricsVerifyReport();
+  if(report.empty) return;
+  shibZSetGenerateStatus(
+    report.ok ? 'Lyrics match the pattern' : 'Lyrics do not match the pattern',
+    report.ok ? 'ok' : 'error'
+  );
+}
+
+function shibZSyncVerifyLyricsToggle(){
+  if(!verifyLyricsToggle) return;
+  verifyLyricsToggle.textContent = verifyLyrics ? 'Enabled' : 'Disabled';
+  verifyLyricsToggle.setAttribute('aria-pressed', verifyLyrics ? 'true' : 'false');
+  verifyLyricsToggle.classList.toggle('on', verifyLyrics);
+}
+
+function shibZSetVerifyLyrics(on, save){
+  verifyLyrics = !!on;
+  shibZSyncVerifyLyricsToggle();
+  if(save === false) return;
+  shibZUpdatePhraseTable();
+  if(!verifyLyrics){
+    if(generateStatus && /match the pattern/i.test(generateStatus.textContent||'')){
+      shibZSetGenerateStatus(lyricsGeneratedOnce ? 'Lyrics ready' : '', lyricsGeneratedOnce ? 'ok' : '');
+    }
+  } else {
+    shibZSyncVerifyStatus();
+  }
+  shibZSavePrefs();
 }
 
 function shibZUpdatePhraseTable(){
   const phrases = shibZDetectPhrases();
-  const lyricLines = lyricsOutput ? shibZParseLyricLines(lyricsRaw || lyricsOutput.value, phrases.length) : [];
+  const allLyrics = lyricsOutput ? shibZParseAllLyricPhrases(lyricsRaw || lyricsOutput.value) : [];
+  const canVerify = verifyLyrics && allLyrics.some(p => p.length);
   phraseTbody.innerHTML='';
   tapBadge.textContent = taps.length+' tap'+(taps.length===1?'':'s');
   lineBadge.textContent = phrases.length+' line'+(phrases.length===1?'':'s');
@@ -1884,6 +2031,8 @@ function shibZUpdatePhraseTable(){
   if(phrases.length===0){
     phraseTbody.innerHTML='<tr><td colspan="6" style="color:var(--text-dim);text-align:center">No taps recorded yet</td></tr>';
     lastHighlightKey='';
+    shibZSyncLyricsVerifyView(phrases, allLyrics);
+    if(verifyLyrics) shibZSyncVerifyStatus();
     return;
   }
   const indexes = [];
@@ -1892,16 +2041,31 @@ function shibZUpdatePhraseTable(){
   } else {
     for(let i=0;i<phrases.length;i++) indexes.push(i);
   }
+  const extraPhrases = canVerify ? allLyrics.slice(phrases.length) : [];
+  const renderExtra = (syl)=>{
+    const tr=document.createElement('tr');
+    tr.className = 'verify-extra';
+    tr.innerHTML=`<td class="col-phrase"><span class="color-dot" style="background:var(--red)"></span>+</td><td class="col-count"><span class="count-mismatch">${syl.length} extra</span></td><td class="visual-cell">${shibZVisualPhrase([], '#ff5555', syl, {verify:true})}</td><td class="time-cell">—</td><td class="time-cell">—</td><td class="dur-cell">—</td>`;
+    phraseTbody.appendChild(tr);
+  };
   for(const i of indexes){
     const ph=phrases[i];
     const color = PHRASE_COLORS[i%PHRASE_COLORS.length];
     const start=ph[0], end=ph[ph.length-1];
+    const syl = allLyrics[i] || [];
+    const mismatch = canVerify && syl.length !== ph.length;
+    const countHtml = mismatch ? `<span class="count-mismatch">${syl.length} ≠ ${ph.length}</span>` : String(ph.length);
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td class="col-phrase"><span class="color-dot" style="background:${color}"></span>${i+1}</td><td class="col-count">${ph.length}</td><td class="visual-cell">${shibZVisualPhrase(ph,color,lyricLines[i])}</td><td class="time-cell">${shibZFmtTime(start)}</td><td class="time-cell">${shibZFmtTime(end)}</td><td class="dur-cell">${(end-start).toFixed(2)}s</td>`;
+    if(mismatch) tr.className = 'verify-mismatch';
+    tr.innerHTML=`<td class="col-phrase"><span class="color-dot" style="background:${color}"></span>${i+1}</td><td class="col-count">${countHtml}</td><td class="visual-cell">${shibZVisualPhrase(ph,color,syl,{verify:canVerify})}</td><td class="time-cell">${shibZFmtTime(start)}</td><td class="time-cell">${shibZFmtTime(end)}</td><td class="dur-cell">${(end-start).toFixed(2)}s</td>`;
     phraseTbody.appendChild(tr);
+    if(phraseNewestFirst && i === phrases.length-1) extraPhrases.forEach(renderExtra);
   }
+  if(!phraseNewestFirst) extraPhrases.forEach(renderExtra);
   lastHighlightKey='';
   if(shibZHasTimeline()) shibZSyncTableHighlight(shibZCurrentTime());
+  shibZSyncLyricsVerifyView(phrases, allLyrics);
+  if(verifyLyrics) shibZSyncVerifyStatus();
 }
 
 function shibZTapKey(t){
@@ -2857,7 +3021,8 @@ async function shibZGenerate(){
     shibZSyncDebugIo();
     shibZStoreGenerated(lyrics);
     shibZUpdatePhraseTable();
-    shibZSetGenerateStatus('Lyrics ready', 'ok');
+    if(verifyLyrics) shibZSyncVerifyStatus();
+    else shibZSetGenerateStatus('Lyrics ready', 'ok');
     const tableWrap = document.getElementById('phrase-table-wrap');
     if(tableWrap) tableWrap.scrollIntoView({ behavior:'smooth', block:'start' });
   } catch(err){
@@ -2926,6 +3091,11 @@ if(enterTapToggle){
   enterTapToggle.addEventListener('click', ()=>{
     shibZSetEnterTapsNewLine(!enterTapsNewLine);
     shibZSavePrefs();
+  });
+}
+if(verifyLyricsToggle){
+  verifyLyricsToggle.addEventListener('click', ()=>{
+    shibZSetVerifyLyrics(!verifyLyrics);
   });
 }
 deviceSkewSlider.addEventListener('input', ()=>{

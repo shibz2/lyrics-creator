@@ -344,6 +344,11 @@ section h2 .icon{font-size:1.1rem}
           <button type="button" class="btn btn-ghost btn-toggle on" id="enter-tap-toggle" aria-pressed="true">Enabled</button>
         </div>
         <p class="setting-help">When enabled, Enter records a syllable and starts the next lyric line with that tap. When disabled, Enter only starts the next line.</p>
+        <div class="slider-row">
+          <label>Verify lyrics:</label>
+          <button type="button" class="btn btn-ghost btn-toggle" id="verify-lyrics-toggle" aria-pressed="false">Disabled</button>
+        </div>
+        <p class="setting-help">When enabled on Precise Lyrics Creator, checks that generated lyrics match the rhythm pattern. Extra or missing syllables are marked in red. Off by default.</p>
         <div class="slider-row" id="device-skew-row">
           <label for="device-skew-slider">Output / Bluetooth latency:</label>
           <button type="button" class="btn btn-ghost btn-toggle" id="device-skew-toggle" aria-pressed="false">Disabled</button>
@@ -475,6 +480,7 @@ let reactionSkewMs = DEFAULT_REACTION_SKEW_MS;
 let zoomLevel = 1;
 let phraseNewestFirst = true;
 let enterTapsNewLine = true;
+let verifyLyrics = false;
 let isReplaying = false;
 let replayFiredUpTo = -1;
 let replayActiveTap = null;
@@ -539,6 +545,7 @@ const deviceSkewSlider = document.getElementById('device-skew-slider');
 const deviceSkewVal = document.getElementById('device-skew-val');
 const deviceSkewToggle = document.getElementById('device-skew-toggle');
 const enterTapToggle = document.getElementById('enter-tap-toggle');
+const verifyLyricsToggle = document.getElementById('verify-lyrics-toggle');
 const deviceSkewRow = document.getElementById('device-skew-row');
 const reactionSkewSlider = document.getElementById('reaction-skew-slider');
 const reactionSkewVal = document.getElementById('reaction-skew-val');
@@ -877,7 +884,8 @@ function shibZSavePrefs(){
       zoomLevel,
       phraseNewestFirst,
       enterTapsNewLine,
-      showLyricsSeparator: typeof prev.showLyricsSeparator === 'boolean' ? prev.showLyricsSeparator : false
+      showLyricsSeparator: typeof prev.showLyricsSeparator === 'boolean' ? prev.showLyricsSeparator : false,
+      verifyLyrics
     }));
   } catch(e){}
 }
@@ -906,6 +914,7 @@ function shibZApplyPrefs(){
   if(typeof prefs.phraseNewestFirst === 'boolean') phraseNewestFirst = prefs.phraseNewestFirst;
   shibZSyncPhraseOrderBtn();
   shibZSetEnterTapsNewLine(typeof prefs.enterTapsNewLine === 'boolean' ? prefs.enterTapsNewLine : true);
+  shibZSetVerifyLyrics(typeof prefs.verifyLyrics === 'boolean' ? prefs.verifyLyrics : false, false);
 }
 function shibZSaveSession(){
   shibZSavePrefs();
@@ -2049,6 +2058,19 @@ function shibZSetEnterTapsNewLine(on){
   shibZSyncEnterTapToggle();
 }
 
+function shibZSyncVerifyLyricsToggle(){
+  if(!verifyLyricsToggle) return;
+  verifyLyricsToggle.textContent = verifyLyrics ? 'Enabled' : 'Disabled';
+  verifyLyricsToggle.setAttribute('aria-pressed', verifyLyrics ? 'true' : 'false');
+  verifyLyricsToggle.classList.toggle('on', verifyLyrics);
+}
+
+function shibZSetVerifyLyrics(on, save){
+  verifyLyrics = !!on;
+  shibZSyncVerifyLyricsToggle();
+  if(save !== false) shibZSavePrefs();
+}
+
 function shibZEnterAsTapOnNewLine(){
   if(!shibZHasTimeline() || !isPlaying || isReplaying) return false;
   const tapTime = shibZRecordedTapTime();
@@ -2677,6 +2699,11 @@ if(enterTapToggle){
   enterTapToggle.addEventListener('click', ()=>{
     shibZSetEnterTapsNewLine(!enterTapsNewLine);
     shibZSavePrefs();
+  });
+}
+if(verifyLyricsToggle){
+  verifyLyricsToggle.addEventListener('click', ()=>{
+    shibZSetVerifyLyrics(!verifyLyrics);
   });
 }
 deviceSkewSlider.addEventListener('input', ()=>{
