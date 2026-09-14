@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lyrics Creator</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#111118;--surface:#1a1a24;--surface2:#22222e;--border:#2a2a3a;
+  --text:#e8e8f0;--text-dim:#8888a0;--accent:#7c6cff;--accent2:#ff6ca8;
+  --green:#4ade80;--orange:#ffaa44;--red:#ff5555;
+}
+html{font-size:15px}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;min-height:100vh;padding:0 16px 60px}
+a{color:var(--accent)}
+
+.container{max-width:1100px;margin:0 auto}
+header{text-align:center;padding:28px 0 12px}
+header h1{font-size:1.75rem;font-weight:700;letter-spacing:-.02em}
+header h1 span{color:var(--accent)}
+header p{color:var(--text-dim);font-size:.85rem;margin-top:4px}
+
+section{background:var(--surface);border-radius:12px;padding:20px 24px;margin-top:18px}
+section h2{font-size:1rem;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+section h2 .icon{font-size:1.1rem}
+
+#upload-zone{border:2px dashed var(--border);border-radius:10px;padding:48px 20px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s}
+#upload-zone.dragover{border-color:var(--accent);background:rgba(124,108,255,.08)}
+#upload-zone .big{font-size:2.2rem;margin-bottom:8px}
+#upload-zone p{color:var(--text-dim);font-size:.85rem}
+#upload-zone .btn-pick{display:inline-block;margin-top:14px;padding:8px 22px;background:var(--accent);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:600}
+#file-input{display:none}
+#session-hint{display:none;margin-top:14px;color:var(--orange);font-size:.82rem}
+
+#player-section{display:none}
+.player-bar{display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+.player-bar .file-name{font-size:.8rem;color:var(--text-dim);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.player-bar .time{font-family:'SF Mono',Consolas,monospace;font-size:.82rem;color:var(--text-dim);min-width:100px;text-align:right}
+.tap-badge{background:var(--accent);color:#fff;padding:4px 14px;border-radius:20px;font-size:.82rem;font-weight:600;white-space:nowrap}
+.line-badge{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:4px 14px;border-radius:20px;font-size:.82rem;font-weight:600;white-space:nowrap}
+
+#waveform-wrap{position:relative;width:100%;border-radius:8px;overflow:hidden;background:var(--surface2);cursor:crosshair}
+#waveform-canvas{display:block;width:100%;height:160px}
+#tooltip{position:absolute;pointer-events:none;background:rgba(0,0,0,.88);color:#fff;font-size:.75rem;padding:4px 10px;border-radius:6px;white-space:nowrap;display:none;z-index:10;transform:translateX(-50%)}
+
+.ripple{position:absolute;width:24px;height:24px;border-radius:50%;border:2px solid var(--accent);opacity:1;transform:scale(1);pointer-events:none;animation:ripple-out .5s ease-out forwards}
+@keyframes ripple-out{to{transform:scale(3.5);opacity:0}}
+
+.banner{display:none;text-align:center;padding:8px;border-radius:8px;font-weight:600;font-size:.85rem;margin-top:10px}
+#rewind-banner{background:var(--orange);color:#000}
+#line-banner{background:var(--accent);color:#fff}
+
+.controls-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;flex-wrap:wrap}
+.speed-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.speed-row .lbl{font-size:.78rem;color:var(--text-dim);margin-right:4px}
+.speed-btn{padding:5px 10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);border-radius:7px;font-size:.78rem;font-weight:600;cursor:pointer}
+.speed-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.speed-btn:hover{border-color:var(--accent)}
+.link-btn{background:none;border:none;color:var(--accent);cursor:pointer;font-size:.78rem;padding:0}
+
+#phrase-table-wrap{margin-top:14px;overflow-x:auto}
+#phrase-table{width:100%;border-collapse:collapse;font-size:.8rem}
+#phrase-table th{text-align:left;color:var(--text-dim);font-weight:500;padding:6px 10px;border-bottom:1px solid var(--border)}
+#phrase-table td{padding:6px 10px;border-bottom:1px solid var(--border)}
+#phrase-table .color-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+
+.slider-row{display:flex;align-items:center;gap:12px;margin-top:10px;flex-wrap:wrap}
+.slider-row label{font-size:.82rem;color:var(--text-dim);white-space:nowrap}
+.slider-row input[type=range]{flex:1;min-width:120px;accent-color:var(--accent)}
+.slider-row .val{font-family:monospace;font-size:.82rem;min-width:40px}
+
+#prompt-section{display:none}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-grid .full{grid-column:1/-1}
+.form-grid label{display:block;font-size:.78rem;color:var(--text-dim);margin-bottom:4px}
+.form-grid input,.form-grid textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:.85rem;font-family:inherit;resize:vertical}
+.form-grid textarea{min-height:60px}
+.btn{padding:10px 24px;border:none;border-radius:8px;font-size:.85rem;font-weight:600;cursor:pointer;transition:transform .1s,box-shadow .15s}
+.btn:active{transform:scale(.97)}
+.btn-accent{background:var(--accent);color:#fff}
+.btn-accent:hover{box-shadow:0 0 18px rgba(124,108,255,.45)}
+.btn-process{background:var(--accent2);color:#fff}
+.btn-process:hover{box-shadow:0 0 18px rgba(255,108,168,.4)}
+#prompt-output{width:100%;min-height:140px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;color:var(--text-dim);font-family:'SF Mono',Consolas,monospace;font-size:.78rem;margin-top:12px;resize:vertical}
+
+.legend{margin-top:18px;background:var(--surface);border-radius:12px;padding:16px 24px}
+.legend h2{font-size:1rem;font-weight:600;margin-bottom:10px}
+.legend table{width:100%;font-size:.82rem;border-collapse:collapse}
+.legend td{padding:5px 10px;border-bottom:1px solid var(--border)}
+.legend td:first-child{font-weight:600;width:180px;color:var(--accent)}
+
+@media(max-width:600px){
+  .form-grid{grid-template-columns:1fr}
+  #waveform-canvas{height:120px}
+  section{padding:16px}
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Lyrics <span>Creator</span></h1>
+    <p>Upload a track, tap syllables to the beat, then generate a prompt for your AI lyricist.</p>
+  </header>
+
+  <section id="upload-section">
+    <div id="upload-zone">
+      <div class="big">🎧</div>
+      <p>Drag & drop an audio file here</p>
+      <p style="margin-top:4px;font-size:.78rem">MP3 or WAV</p>
+      <button type="button" class="btn-pick" id="pick-btn">Choose File</button>
+      <input type="file" id="file-input" accept="audio/mpeg,audio/wav,audio/mp3,audio/wave,audio/*">
+      <p id="session-hint"></p>
+    </div>
+  </section>
+
+  <section id="player-section">
+    <h2><span class="icon">🎚️</span> Player &amp; Tap Mode</h2>
+    <div class="player-bar">
+      <button type="button" class="btn btn-accent" id="play-btn">Play</button>
+      <span class="file-name" id="file-name"></span>
+      <button type="button" class="link-btn" id="change-file-btn">Change file</button>
+      <span class="line-badge" id="line-badge">0 lines</span>
+      <span class="tap-badge" id="tap-badge">0 taps</span>
+      <span class="time" id="time-display">0:00.000 / 0:00</span>
+    </div>
+    <div id="waveform-wrap">
+      <canvas id="waveform-canvas"></canvas>
+      <div id="tooltip"></div>
+    </div>
+    <div class="banner" id="rewind-banner">↩ Rewound — press Space to resume</div>
+    <div class="banner" id="line-banner">New lyric line — next taps start the next phrase</div>
+    <div class="controls-row">
+      <div class="speed-row" role="group" aria-label="Playback speed">
+        <span class="lbl">Speed</span>
+        <button type="button" class="speed-btn" data-rate="2">2×</button>
+        <button type="button" class="speed-btn active" data-rate="1">1×</button>
+        <button type="button" class="speed-btn" data-rate="0.75">0.75×</button>
+        <button type="button" class="speed-btn" data-rate="0.5">0.5×</button>
+        <button type="button" class="speed-btn" data-rate="0.33">0.33×</button>
+        <button type="button" class="speed-btn" data-rate="0.25">0.25×</button>
+        <button type="button" class="speed-btn" data-rate="0.15">0.15×</button>
+      </div>
+      <button type="button" class="btn btn-process" id="process-btn">Process so far</button>
+    </div>
+    <div class="slider-row">
+      <label for="gap-slider">Phrase gap threshold:</label>
+      <input type="range" id="gap-slider" min="0.5" max="3.0" step="0.1" value="1.5">
+      <span class="val" id="gap-val">1.5s</span>
+    </div>
+
+    <div id="phrase-table-wrap">
+      <table id="phrase-table">
+        <thead><tr><th>Phrase</th><th>Syllables</th><th>Start</th><th>End</th><th>Duration</th></tr></thead>
+        <tbody id="phrase-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="prompt-section">
+    <h2><span class="icon">✍️</span> Lyrics Prompt Generator</h2>
+    <div class="form-grid">
+      <div><label for="lang-input">Target Language</label><input type="text" id="lang-input" placeholder="e.g. Spanish, Japanese, English…"></div>
+      <div><label for="style-input">Style / Mood (optional)</label><input type="text" id="style-input" placeholder="e.g. romantic ballad, upbeat pop…"></div>
+      <div class="full"><label for="extra-input">Extra Instructions (optional)</label><textarea id="extra-input" placeholder="Any additional guidance for the AI…"></textarea></div>
+      <div class="full" style="display:flex;gap:10px;flex-wrap:wrap">
+        <button type="button" class="btn btn-process" id="process-btn-2">Process so far</button>
+        <button type="button" class="btn btn-accent" id="copy-prompt-btn">Copy Prompt</button>
+        <span id="copy-confirm" style="font-size:.82rem;color:var(--green);align-self:center;display:none">Copied!</span>
+      </div>
+    </div>
+    <textarea id="prompt-output" readonly placeholder="Generated prompt will appear here…"></textarea>
+  </section>
+
+  <div class="legend">
+    <h2>Key Bindings</h2>
+    <table>
+      <tr><td>Spacebar or Play</td><td>Play / Pause</td></tr>
+      <tr><td>Any other key</td><td>Record syllable tap (while playing)</td></tr>
+      <tr><td>Enter</td><td>Start the next lyric line at the playhead (in addition to auto-detected gaps)</td></tr>
+      <tr><td>Backspace</td><td>Delete last tap · Pause · Rewind ~7s before last remaining tap · Show resume banner</td></tr>
+    </table>
+  </div>
+
+  <footer style="text-align:center;padding:28px 0 8px;color:var(--text-dim);font-size:.78rem">
+    created by <a href="https://shibz.uk" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600;text-decoration:none">shibZ</a>
+  </footer>
+</div>
+
+<script>
+(function shibZLyricsCreator(){
+"use strict";
+
+const STORAGE_KEY = 'shibZLyricsSession';
+const SPEED_RATES = [2, 1, 0.75, 0.5, 0.33, 0.25, 0.15];
+const RESERVED_CODES = new Set([
+  'Space','Backspace','Enter','NumpadEnter','Tab','Escape','CapsLock','ControlLeft','ControlRight',
+  'ShiftLeft','ShiftRight','AltLeft','AltRight','MetaLeft','MetaRight','ContextMenu','Dead',
+  'ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','PageUp','PageDown','Insert','Delete'
+]);
+
+let audioCtx = null;
+let audioBuffer = null;
+let sourceNode = null;
+let isPlaying = false;
+let startedAt = 0;
+let pausedAt = 0;
+let playbackRate = 1;
+let taps = [];
+let manualBreaks = [];
+let gapThreshold = 1.5;
+let waveformData = null;
+let animFrame = null;
+let currentFileName = '';
+let lineBannerTimer = null;
+
+const uploadZone = document.getElementById('upload-zone');
+const uploadSection = document.getElementById('upload-section');
+const fileInput = document.getElementById('file-input');
+const pickBtn = document.getElementById('pick-btn');
+const changeFileBtn = document.getElementById('change-file-btn');
+const sessionHint = document.getElementById('session-hint');
+const playerSection = document.getElementById('player-section');
+const promptSection = document.getElementById('prompt-section');
+const fileNameEl = document.getElementById('file-name');
+const tapBadge = document.getElementById('tap-badge');
+const lineBadge = document.getElementById('line-badge');
+const timeDisplay = document.getElementById('time-display');
+const canvas = document.getElementById('waveform-canvas');
+const ctx = canvas.getContext('2d');
+const tooltip = document.getElementById('tooltip');
+const rewindBanner = document.getElementById('rewind-banner');
+const lineBanner = document.getElementById('line-banner');
+const gapSlider = document.getElementById('gap-slider');
+const gapVal = document.getElementById('gap-val');
+const phraseTbody = document.getElementById('phrase-tbody');
+const langInput = document.getElementById('lang-input');
+const styleInput = document.getElementById('style-input');
+const extraInput = document.getElementById('extra-input');
+const copyBtn = document.getElementById('copy-prompt-btn');
+const processBtn = document.getElementById('process-btn');
+const processBtn2 = document.getElementById('process-btn-2');
+const copyConfirm = document.getElementById('copy-confirm');
+const promptOutput = document.getElementById('prompt-output');
+const waveformWrap = document.getElementById('waveform-wrap');
+const playBtn = document.getElementById('play-btn');
+const speedButtons = Array.from(document.querySelectorAll('.speed-btn'));
+
+const PHRASE_COLORS = ['#7c6cff','#ff6ca8','#4ade80','#ffaa44','#60b5ff','#ff9898','#a19ad3','#80d8c3','#ff5555','#f0e060'];
+
+function shibZFmtTime(s){
+  if(!isFinite(s)||s<0) s=0;
+  const m=Math.floor(s/60);
+  const sec=s-m*60;
+  return m+':'+sec.toFixed(3).padStart(6,'0');
+}
+function shibZFmtShort(s){
+  if(!isFinite(s)||s<0) s=0;
+  const m=Math.floor(s/60);
+  const sec=Math.floor(s-m*60);
+  return m+':'+String(sec).padStart(2,'0');
+}
+function shibZCurrentTime(){
+  if(!audioCtx||!audioBuffer) return 0;
+  if(!isPlaying) return pausedAt;
+  const t = pausedAt + (audioCtx.currentTime - startedAt) * playbackRate;
+  return Math.min(Math.max(t,0), audioBuffer.duration);
+}
+
+function shibZInitAudioCtx(){
+  if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+}
+async function shibZUnlockAudio(){
+  shibZInitAudioCtx();
+  if(audioCtx.state==='suspended'){
+    try { await audioCtx.resume(); } catch(e){}
+  }
+}
+function shibZSyncPlayBtn(){
+  playBtn.textContent = isPlaying ? 'Pause' : 'Play';
+}
+
+function shibZReadSession(){
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); }
+  catch(e){ return null; }
+}
+function shibZSaveSession(){
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      fileName: currentFileName,
+      taps,
+      manualBreaks,
+      gapThreshold,
+      playbackRate,
+      lang: langInput.value,
+      style: styleInput.value,
+      extra: extraInput.value
+    }));
+  } catch(e){}
+}
+function shibZApplySession(session){
+  if(!session) return;
+  taps = Array.isArray(session.taps) ? session.taps.slice() : [];
+  manualBreaks = Array.isArray(session.manualBreaks) ? session.manualBreaks.slice() : [];
+  if(typeof session.gapThreshold === 'number'){
+    gapThreshold = session.gapThreshold;
+    gapSlider.value = String(gapThreshold);
+    gapVal.textContent = gapThreshold.toFixed(1)+'s';
+  }
+  if(typeof session.playbackRate === 'number'){
+    shibZSetSpeed(session.playbackRate, false);
+  }
+  if(typeof session.lang === 'string') langInput.value = session.lang;
+  if(typeof session.style === 'string') styleInput.value = session.style;
+  if(typeof session.extra === 'string') extraInput.value = session.extra;
+}
+
+function shibZRefreshSessionHint(){
+  const session = shibZReadSession();
+  if(session && session.fileName && (session.taps||[]).length){
+    sessionHint.style.display = 'block';
+    sessionHint.textContent = 'Saved session: '+session.fileName+' — '+(session.taps.length)+' taps. Drop the same file to continue.';
+  } else {
+    sessionHint.style.display = 'none';
+  }
+}
+
+function shibZOpenPicker(){ fileInput.click(); }
+
+pickBtn.addEventListener('click', e=>{ e.stopPropagation(); shibZOpenPicker(); });
+changeFileBtn.addEventListener('click', shibZOpenPicker);
+uploadZone.addEventListener('click', e=>{
+  if(e.target === pickBtn) return;
+  shibZOpenPicker();
+});
+uploadZone.addEventListener('dragover', e=>{e.preventDefault();uploadZone.classList.add('dragover')});
+uploadZone.addEventListener('dragleave', ()=>uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', e=>{
+  e.preventDefault();uploadZone.classList.remove('dragover');
+  const f=e.dataTransfer?.files?.[0];
+  if(f) shibZLoadFile(f);
+});
+fileInput.addEventListener('change', ()=>{
+  const f=fileInput?.files?.[0];
+  if(f) shibZLoadFile(f);
+  fileInput.value = '';
+});
+
+async function shibZLoadFile(file){
+  shibZInitAudioCtx();
+  if(audioCtx.state==='suspended') await audioCtx.resume();
+  shibZStopPlayback();
+  const buf = await file.arrayBuffer();
+  audioBuffer = await audioCtx.decodeAudioData(buf.slice(0));
+  currentFileName = file.name;
+  fileNameEl.textContent = file.name;
+
+  const session = shibZReadSession();
+  if(session && session.fileName === file.name){
+    shibZApplySession(session);
+  } else {
+    taps = [];
+    manualBreaks = [];
+  }
+
+  uploadSection.style.display='none';
+  playerSection.style.display='block';
+  promptSection.style.display='block';
+  shibZComputeWaveform();
+  shibZStartRenderLoop();
+  shibZUpdatePhraseTable();
+  shibZSaveSession();
+}
+
+function shibZComputeWaveform(){
+  const raw = audioBuffer.getChannelData(0);
+  const w = Math.max(1, canvas.clientWidth);
+  const dpr = window.devicePixelRatio||1;
+  canvas.width = w*dpr;
+  canvas.height = canvas.clientHeight*dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const samplesPerPx = Math.max(1, Math.floor(raw.length / w));
+  const peaks = new Float32Array(w);
+  for(let i=0;i<w;i++){
+    let max=0;
+    const start=i*samplesPerPx;
+    for(let j=start;j<start+samplesPerPx&&j<raw.length;j++){
+      const v=Math.abs(raw[j]);
+      if(v>max) max=v;
+    }
+    peaks[i]=max;
+  }
+  waveformData=peaks;
+}
+
+async function shibZPlay(){
+  if(!audioBuffer) return;
+  await shibZUnlockAudio();
+  if(pausedAt >= audioBuffer.duration) pausedAt = 0;
+  if(sourceNode){try{sourceNode.stop()}catch(e){}}
+  sourceNode = audioCtx.createBufferSource();
+  sourceNode.buffer = audioBuffer;
+  sourceNode.playbackRate.value = playbackRate;
+  sourceNode.connect(audioCtx.destination);
+  const thisSource = sourceNode;
+  sourceNode.onended = ()=>{
+    if(sourceNode !== thisSource) return;
+    if(isPlaying){
+      const t = shibZCurrentTime();
+      if(t >= audioBuffer.duration - 0.02){
+        isPlaying=false;
+        pausedAt=audioBuffer.duration;
+        shibZSyncPlayBtn();
+      }
+    }
+  };
+  startedAt = audioCtx.currentTime;
+  sourceNode.start(0, pausedAt);
+  isPlaying=true;
+  rewindBanner.style.display='none';
+  shibZSyncPlayBtn();
+}
+
+function shibZPause(){
+  if(!isPlaying) return;
+  pausedAt = shibZCurrentTime();
+  if(sourceNode){try{sourceNode.stop()}catch(e){}}
+  isPlaying=false;
+  shibZSyncPlayBtn();
+}
+
+function shibZStopPlayback(){
+  shibZPause();
+  pausedAt=0;
+}
+
+function shibZSeekTo(t){
+  const wasPlaying=isPlaying;
+  if(isPlaying) shibZPause();
+  pausedAt=Math.max(0,Math.min(t, audioBuffer?.duration??0));
+  if(wasPlaying) shibZPlay();
+}
+
+function shibZSetSpeed(rate, restart){
+  const next = SPEED_RATES.includes(rate) ? rate : 1;
+  const wasPlaying = isPlaying;
+  if(restart !== false && wasPlaying) shibZPause();
+  playbackRate = next;
+  speedButtons.forEach(btn=>{
+    btn.classList.toggle('active', parseFloat(btn.dataset.rate) === playbackRate);
+  });
+  if(restart !== false && wasPlaying) shibZPlay();
+  shibZSaveSession();
+}
+
+speedButtons.forEach(btn=>{
+  btn.addEventListener('click', ()=> shibZSetSpeed(parseFloat(btn.dataset.rate)));
+});
+playBtn.addEventListener('click', ()=>{
+  if(!audioBuffer) return;
+  if(isPlaying) shibZPause(); else shibZPlay();
+});
+document.addEventListener('pointerdown', ()=>{ shibZUnlockAudio(); }, { passive:true });
+
+function shibZDetectPhrases(){
+  const sorted = [...taps].sort((a,b)=>a-b);
+  const allBreaks = new Set(manualBreaks);
+  const phrases=[];
+  let cur=[];
+  for(let i=0;i<sorted.length;i++){
+    if(cur.length>0){
+      const gap = sorted[i]-sorted[i-1];
+      let hasManual = false;
+      for(const mb of allBreaks){
+        if(mb>sorted[i-1]&&mb<sorted[i]){hasManual=true;break;}
+      }
+      if(gap>gapThreshold||hasManual){
+        phrases.push([...cur]);
+        cur=[];
+      }
+    }
+    cur.push(sorted[i]);
+  }
+  if(cur.length) phrases.push(cur);
+  return phrases;
+}
+
+function shibZUpdatePhraseTable(){
+  const phrases = shibZDetectPhrases();
+  phraseTbody.innerHTML='';
+  tapBadge.textContent = taps.length+' tap'+(taps.length===1?'':'s');
+  lineBadge.textContent = phrases.length+' line'+(phrases.length===1?'':'s');
+  if(phrases.length===0){
+    phraseTbody.innerHTML='<tr><td colspan="5" style="color:var(--text-dim);text-align:center">No taps recorded yet</td></tr>';
+    return;
+  }
+  phrases.forEach((ph,i)=>{
+    const color = PHRASE_COLORS[i%PHRASE_COLORS.length];
+    const start=ph[0], end=ph[ph.length-1];
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td><span class="color-dot" style="background:${color}"></span>${i+1}</td><td>${ph.length}</td><td>${shibZFmtTime(start)}</td><td>${shibZFmtTime(end)}</td><td>${(end-start).toFixed(2)}s</td>`;
+    phraseTbody.appendChild(tr);
+  });
+}
+
+function shibZFlashLineBanner(){
+  lineBanner.style.display='block';
+  clearTimeout(lineBannerTimer);
+  lineBannerTimer = setTimeout(()=>{ lineBanner.style.display='none'; }, 1600);
+}
+
+function shibZAdvanceLine(){
+  if(!audioBuffer || taps.length===0) return false;
+  const t = shibZCurrentTime();
+  const prior = taps.filter(x => x <= t + 0.0005);
+  if(prior.length===0) return false;
+  const lastTap = Math.max(...prior);
+  const breakAt = lastTap + 0.0001;
+  if(manualBreaks.some(mb => Math.abs(mb - breakAt) < 0.04)) return false;
+  manualBreaks.push(breakAt);
+  manualBreaks.sort((a,b)=>a-b);
+  shibZFlashLineBanner();
+  shibZUpdatePhraseTable();
+  shibZSaveSession();
+  return true;
+}
+
+function shibZDrawFrame(){
+  if(!waveformData) return;
+  const W=canvas.clientWidth, H=canvas.clientHeight;
+  ctx.clearRect(0,0,W,H);
+  const dur=audioBuffer?.duration??1;
+  const t=shibZCurrentTime();
+
+  const phrases=shibZDetectPhrases();
+  const tapPhrase=new Map();
+  phrases.forEach((ph,pi)=>ph.forEach(tap=>tapPhrase.set(tap,pi)));
+
+  for(let i=0;i<waveformData.length;i++){
+    const x=i;
+    const h=waveformData[i]*H*0.85;
+    const barTime=(i/W)*dur;
+    let color='#333344';
+    if(barTime<=t) color='#444460';
+    ctx.fillStyle=color;
+    ctx.fillRect(x, (H-h)/2, 1, h||1);
+  }
+
+  phrases.forEach((ph,pi)=>{
+    if(ph.length===0) return;
+    const x1=(ph[0]/dur)*W;
+    const x2=(ph[ph.length-1]/dur)*W;
+    const color=PHRASE_COLORS[pi%PHRASE_COLORS.length];
+    ctx.fillStyle=color+'15';
+    ctx.fillRect(x1,0,x2-x1+1,H);
+  });
+
+  const sorted=[...taps].sort((a,b)=>a-b);
+  sorted.forEach((tap)=>{
+    const x=(tap/dur)*W;
+    const pi=tapPhrase.get(tap)??0;
+    const color=PHRASE_COLORS[pi%PHRASE_COLORS.length];
+    ctx.strokeStyle=color;
+    ctx.lineWidth=1.5;
+    ctx.beginPath();
+    ctx.moveTo(x,8);
+    ctx.lineTo(x,H-8);
+    ctx.stroke();
+  });
+
+  manualBreaks.forEach(mb=>{
+    const x=(mb/dur)*W;
+    ctx.strokeStyle='#ffaa44';
+    ctx.lineWidth=2;
+    ctx.setLineDash([4,3]);
+    ctx.beginPath();
+    ctx.moveTo(x,0);
+    ctx.lineTo(x,H);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='#ffaa44';
+    ctx.beginPath();
+    ctx.moveTo(x,2);ctx.lineTo(x+5,8);ctx.lineTo(x,14);ctx.lineTo(x-5,8);ctx.closePath();ctx.fill();
+  });
+
+  for(let i=1;i<phrases.length;i++){
+    const prevEnd=phrases[i-1][phrases[i-1].length-1];
+    const nextStart=phrases[i][0];
+    const midTime=(prevEnd+nextStart)/2;
+    let isManual=false;
+    for(const mb of manualBreaks){
+      if(mb>prevEnd&&mb<nextStart){isManual=true;break;}
+    }
+    if(!isManual){
+      const x=(midTime/dur)*W;
+      ctx.strokeStyle='#ffffff22';
+      ctx.lineWidth=1;
+      ctx.setLineDash([2,4]);
+      ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+
+  const nx=(t/dur)*W;
+  ctx.strokeStyle='#fff';
+  ctx.lineWidth=2;
+  ctx.shadowColor='#fff';
+  ctx.shadowBlur=6;
+  ctx.beginPath();ctx.moveTo(nx,0);ctx.lineTo(nx,H);ctx.stroke();
+  ctx.shadowBlur=0;
+  ctx.fillStyle='#fff';
+  ctx.beginPath();ctx.arc(nx,H/2,4,0,Math.PI*2);ctx.fill();
+
+  timeDisplay.textContent=shibZFmtTime(t)+' / '+shibZFmtShort(dur);
+
+  if(isPlaying && t>=dur){
+    shibZPause();
+    pausedAt=dur;
+    shibZSyncPlayBtn();
+  }
+
+  animFrame=requestAnimationFrame(shibZDrawFrame);
+}
+function shibZStartRenderLoop(){
+  if(animFrame) cancelAnimationFrame(animFrame);
+  shibZDrawFrame();
+}
+
+canvas.addEventListener('click', e=>{
+  if(!audioBuffer) return;
+  const rect=canvas.getBoundingClientRect();
+  const x=e.clientX-rect.left;
+  const ratio=x/rect.width;
+  const t=ratio*audioBuffer.duration;
+  const dur=audioBuffer.duration;
+
+  for(let i=0;i<manualBreaks.length;i++){
+    const bx=(manualBreaks[i]/dur)*rect.width;
+    if(Math.abs(x-bx)<6){
+      manualBreaks.splice(i,1);
+      shibZUpdatePhraseTable();
+      shibZSaveSession();
+      return;
+    }
+  }
+
+  const sorted=[...taps].sort((a,b)=>a-b);
+  for(let i=0;i<sorted.length-1;i++){
+    const tx1=(sorted[i]/dur)*rect.width;
+    const tx2=(sorted[i+1]/dur)*rect.width;
+    if(x>tx1+6 && x<tx2-6){
+      manualBreaks.push(t);
+      manualBreaks.sort((a,b)=>a-b);
+      shibZUpdatePhraseTable();
+      shibZSaveSession();
+      return;
+    }
+  }
+
+  shibZSeekTo(t);
+});
+
+canvas.addEventListener('mousemove', e=>{
+  if(!audioBuffer||!taps.length){
+    tooltip.style.display='none';
+    return;
+  }
+  const rect=canvas.getBoundingClientRect();
+  const x=e.clientX-rect.left;
+  const dur=audioBuffer.duration;
+  const hoverTime=(x/rect.width)*dur;
+
+  const sorted=[...taps].sort((a,b)=>a-b);
+  let closest=-1, minDist=Infinity;
+  sorted.forEach((tap,i)=>{
+    const d=Math.abs(tap-hoverTime);
+    if(d<minDist){minDist=d;closest=i;}
+  });
+
+  const tapPx=(sorted[closest]/dur)*rect.width;
+  if(Math.abs(x-tapPx)<12){
+    const phrases=shibZDetectPhrases();
+    let phraseIdx=0;
+    for(let p=0;p<phrases.length;p++){
+      if(phrases[p].includes(sorted[closest])){phraseIdx=p+1;break;}
+    }
+    tooltip.textContent=`Syllable ${closest+1} · ${shibZFmtTime(sorted[closest])} · Phrase ${phraseIdx}`;
+    tooltip.style.display='block';
+    tooltip.style.left=(tapPx)+'px';
+    tooltip.style.top='-28px';
+  } else {
+    let nearBreak=false;
+    for(const mb of manualBreaks){
+      const bpx=(mb/dur)*rect.width;
+      if(Math.abs(x-bpx)<8){
+        tooltip.textContent='Click to remove phrase break';
+        tooltip.style.display='block';
+        tooltip.style.left=bpx+'px';
+        tooltip.style.top='-28px';
+        nearBreak=true;
+        break;
+      }
+    }
+    if(!nearBreak){
+      let betweenTaps=false;
+      for(let i=0;i<sorted.length-1;i++){
+        const tx1=(sorted[i]/dur)*rect.width;
+        const tx2=(sorted[i+1]/dur)*rect.width;
+        if(x>tx1+6&&x<tx2-6){
+          tooltip.textContent='Click to add phrase break';
+          tooltip.style.display='block';
+          tooltip.style.left=x+'px';
+          tooltip.style.top='-28px';
+          betweenTaps=true;
+          break;
+        }
+      }
+      if(!betweenTaps) tooltip.style.display='none';
+    }
+  }
+});
+canvas.addEventListener('mouseleave',()=>{tooltip.style.display='none'});
+
+function shibZSpawnRipple(){
+  if(!audioBuffer) return;
+  const dur=audioBuffer.duration;
+  const t=shibZCurrentTime();
+  const wrap=waveformWrap;
+  const rect=wrap.getBoundingClientRect();
+  const nx=(t/dur)*rect.width;
+  const el=document.createElement('div');
+  el.className='ripple';
+  el.style.left=(nx-12)+'px';
+  el.style.top=(rect.height/2-12)+'px';
+  wrap.appendChild(el);
+  setTimeout(()=>el.remove(),500);
+}
+
+function shibZIsTypingTarget(el){
+  const tag=el?.tagName?.toLowerCase?.()??'';
+  return tag==='input'||tag==='textarea'||tag==='select'||el?.isContentEditable;
+}
+
+function shibZIsReservedTapKey(e){
+  if(e.ctrlKey||e.altKey||e.metaKey) return true;
+  if(RESERVED_CODES.has(e.code)) return true;
+  if(/^F\d{1,2}$/.test(e.code)) return true;
+  return false;
+}
+
+document.addEventListener('keydown', e=>{
+  if(shibZIsTypingTarget(e.target)) return;
+
+  if(e.code==='Space'){
+    e.preventDefault();
+    if(e.repeat||!audioBuffer) return;
+    if(isPlaying) shibZPause(); else shibZPlay();
+    return;
+  }
+
+  if(e.code==='Enter' || e.code==='NumpadEnter'){
+    e.preventDefault();
+    if(e.repeat) return;
+    shibZAdvanceLine();
+    return;
+  }
+
+  if(e.code==='Backspace'){
+    e.preventDefault();
+    if(e.repeat||taps.length===0) return;
+    taps.pop();
+    shibZPause();
+    let rewindTo=0;
+    if(taps.length>0){
+      const lastTap=Math.max(...taps);
+      rewindTo=Math.max(0, lastTap-7);
+    }
+    pausedAt=rewindTo;
+    rewindBanner.style.display='block';
+    shibZUpdatePhraseTable();
+    shibZSaveSession();
+    return;
+  }
+
+  if(!isPlaying||!audioBuffer||e.repeat||shibZIsReservedTapKey(e)) return;
+  e.preventDefault();
+  taps.push(shibZCurrentTime());
+  shibZSpawnRipple();
+  shibZUpdatePhraseTable();
+  shibZSaveSession();
+});
+
+gapSlider.addEventListener('input',()=>{
+  gapThreshold=parseFloat(gapSlider.value);
+  gapVal.textContent=gapThreshold.toFixed(1)+'s';
+  shibZUpdatePhraseTable();
+  shibZSaveSession();
+});
+
+function shibZBuildPrompt(){
+  const phrases=shibZDetectPhrases();
+  if(phrases.length===0){
+    return { ok:false, text:'No taps recorded yet — play the track and tap some syllables first!' };
+  }
+  const lang=(langInput.value||'').trim()||'English';
+  const style=(styleInput.value||'').trim();
+  const extra=(extraInput.value||'').trim();
+
+  let lines='';
+  phrases.forEach((ph,i)=>{
+    lines+=`Line ${i+1}: ${ph.length} syllable${ph.length!==1?'s':''}\n`;
+  });
+
+  let prompt=`You are a lyricist. Write song lyrics matching the EXACT syllable structure below.\n\n`;
+  prompt+=`Language: ${lang}\n`;
+  if(style) prompt+=`Style / Mood: ${style}\n`;
+  prompt+=`\nSyllable structure:\n${lines}`;
+  prompt+=`\nRules:\n- Match the syllable count of each line EXACTLY.\n- Maintain natural rhythm and rhyme.\n- Output ONLY the lyrics, nothing else.\n`;
+  if(extra) prompt+=`\nAdditional instructions:\n${extra}\n`;
+  return { ok:true, text:prompt };
+}
+
+function shibZShowCopied(){
+  copyConfirm.style.display='inline';
+  setTimeout(()=>{copyConfirm.style.display='none'},2000);
+}
+
+function shibZProcess(opts){
+  const result = shibZBuildPrompt();
+  promptOutput.value = result.text;
+  promptSection.style.display='block';
+  if(opts && opts.scroll !== false){
+    promptSection.scrollIntoView({ behavior:'smooth', block:'start' });
+  }
+  if(result.ok){
+    navigator.clipboard?.writeText?.(result.text)?.then?.(shibZShowCopied)?.catch?.(()=>{});
+  }
+  shibZSaveSession();
+}
+
+copyBtn.addEventListener('click', ()=> shibZProcess({ scroll:false }));
+processBtn.addEventListener('click', ()=> shibZProcess({ scroll:true }));
+processBtn2.addEventListener('click', ()=> shibZProcess({ scroll:false }));
+
+;[langInput, styleInput, extraInput].forEach(el=>{
+  el.addEventListener('input', shibZSaveSession);
+});
+
+window.addEventListener('resize',()=>{
+  if(audioBuffer) shibZComputeWaveform();
+});
+
+const saved = shibZReadSession();
+if(saved){
+  if(typeof saved.lang === 'string') langInput.value = saved.lang;
+  if(typeof saved.style === 'string') styleInput.value = saved.style;
+  if(typeof saved.extra === 'string') extraInput.value = saved.extra;
+  if(typeof saved.playbackRate === 'number') shibZSetSpeed(saved.playbackRate, false);
+}
+shibZRefreshSessionHint();
+
+})();
+</script>
+</body>
+</html>
