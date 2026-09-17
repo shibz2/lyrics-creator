@@ -403,7 +403,20 @@ section h2 .icon{font-size:1.1rem}
           <input type="range" id="tts-lead-slider" min="0" max="300" step="5" value="50">
           <span class="val" id="tts-lead-val">50ms</span>
         </div>
-        <p class="setting-help">When “Say syllables out loud” is on, the browser voice starts this many milliseconds before each tap, to cover TTS delay. Default 50ms. Uses the device’s built-in voice; the audio file never leaves this tab.</p>
+        <p class="setting-help">When “Say syllables out loud” is on, the browser voice starts this many milliseconds before each tap, to cover TTS delay. Default 50ms. Uses the device’s built-in voices. English voices cannot speak Malayalam or other non-Latin scripts — install that language’s speech voice in Windows if Test voice is silent.</p>
+        <div class="slider-row">
+          <label for="waveform-vol-slider">Waveform volume:</label>
+          <input type="range" id="waveform-vol-slider" min="0" max="100" step="1" value="100">
+          <span class="val" id="waveform-vol-val">100%</span>
+        </div>
+        <p class="setting-help">Volume of the uploaded track in this tab. Turn this down if the spoken syllables are hard to hear over the music.</p>
+        <div class="slider-row">
+          <label for="tts-vol-slider">Say-syllable volume:</label>
+          <input type="range" id="tts-vol-slider" min="0" max="100" step="1" value="100">
+          <span class="val" id="tts-vol-val">100%</span>
+          <button type="button" class="btn btn-ghost" id="tts-test-btn">Test voice</button>
+        </div>
+        <p class="setting-help">Volume of the spoken lyrics. That voice is separate from the waveform and may use a different Windows output device. Test voice speaks a sample in the lyric language (or Target Language). If Malayalam stays silent, install a Malayalam speech voice in Windows Settings → Time & language → Speech.</p>
         <div class="slider-row" id="device-skew-row">
           <label for="device-skew-slider">Output / Bluetooth latency:</label>
           <button type="button" class="btn btn-ghost btn-toggle" id="device-skew-toggle" aria-pressed="false">Disabled</button>
@@ -436,7 +449,7 @@ section h2 .icon{font-size:1.1rem}
             <tr><td>Backspace</td><td>Delete last tap · Pause · Seek to the previous tap on the waveform</td></tr>
             <tr><td>Start</td><td>Jump to the beginning of the waveform</td></tr>
             <tr><td>First tap</td><td>Jump to the first recorded syllable on the waveform</td></tr>
-            <tr><td>Say syllables out loud</td><td>When enabled, playback speaks each lyric at its tap (starts early by the Settings head start)</td></tr>
+            <tr><td>Say syllables out loud</td><td>When enabled, playback speaks each lyric at its tap (starts early by the Settings head start). Volume is in Settings; Test voice checks the computer’s speech output</td></tr>
             <tr><td>Clear &amp; Start Over</td><td>After Yes, clear lyrics and taps and return to the start of the waveform</td></tr>
             <tr><td>Export MP3 with metadata</td><td>Save a copy of the loaded MP3 with tap data in an ID3v2 tag (MP3 only). Loading that file restores the taps.</td></tr>
             <tr><td>Right-click / long-press a waveform tap</td><td>Delete that syllable on the waveform (asks Yes / No)</td></tr>
@@ -500,6 +513,8 @@ const SEEK_STEP = 2;
 const DEFAULT_DEVICE_SKEW_MS = 500;
 const DEFAULT_REACTION_SKEW_MS = 100;
 const DEFAULT_TTS_LEAD_MS = 50;
+const DEFAULT_WAVEFORM_VOLUME = 100;
+const DEFAULT_TTS_VOLUME = 100;
 const DEFAULT_LANG = 'English';
 const DEFAULT_STYLE = 'romantic';
 const EXTERNAL_FILE_NAME = 'External audio';
@@ -507,7 +522,7 @@ const EXTERNAL_MIN_DURATION = 60;
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 16;
 const MP3_TXXX_DESC = 'shibZ.taps';
-const APP_VERSION = 'v14';
+const APP_VERSION = 'v15';
 const GITHUB_TAGS_URL = 'https://api.github.com/repos/shibz2/lyrics-creator/tags?per_page=40';
 const RESERVED_CODES = new Set([
   'Space','Backspace','Enter','NumpadEnter','Tab','Escape','CapsLock','ControlLeft','ControlRight',
@@ -526,6 +541,7 @@ let lastPointerType = 'mouse';
 let clockOriginPerf = 0;
 let waveformTouchConsumed = false;
 let sourceNode = null;
+let masterGain = null;
 let isPlaying = false;
 let startedAt = 0;
 let pausedAt = 0;
@@ -549,7 +565,15 @@ let showLyricsSeparator = false;
 let verifyLyrics = false;
 let saySyllablesOutLoud = false;
 let ttsLeadMs = DEFAULT_TTS_LEAD_MS;
+let waveformVolume = DEFAULT_WAVEFORM_VOLUME;
+let ttsVolume = DEFAULT_TTS_VOLUME;
 let ttsSpokenKeys = {};
+let ttsUtterance = null;
+let ttsSpeakTimer = null;
+let ttsPrimed = false;
+let ttsFrame = null;
+let ttsResumeTimer = null;
+let ttsVoiceWarnLang = '';
 let isReplaying = false;
 let replayFiredUpTo = -1;
 let replayActiveTap = null;
@@ -628,6 +652,11 @@ const enterTapToggle = document.getElementById('enter-tap-toggle');
 const verifyLyricsToggle = document.getElementById('verify-lyrics-toggle');
 const ttsLeadSlider = document.getElementById('tts-lead-slider');
 const ttsLeadVal = document.getElementById('tts-lead-val');
+const waveformVolSlider = document.getElementById('waveform-vol-slider');
+const waveformVolVal = document.getElementById('waveform-vol-val');
+const ttsVolSlider = document.getElementById('tts-vol-slider');
+const ttsVolVal = document.getElementById('tts-vol-val');
+const ttsTestBtn = document.getElementById('tts-test-btn');
 const deviceSkewRow = document.getElementById('device-skew-row');
 const reactionSkewSlider = document.getElementById('reaction-skew-slider');
 const reactionSkewVal = document.getElementById('reaction-skew-val');
@@ -934,6 +963,16 @@ function shibZInitAudioCtx(){
   if(audioCtx) return;
   try { audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
   catch(e){ audioCtx = null; }
+  if(audioCtx) shibZEnsureGain();
+}
+function shibZEnsureGain(){
+  if(!audioCtx) return null;
+  if(!masterGain || masterGain.context !== audioCtx){
+    masterGain = audioCtx.createGain();
+    masterGain.connect(audioCtx.destination);
+  }
+  masterGain.gain.value = shibZClamp(waveformVolume, 0, 100) / 100;
+  return masterGain;
 }
 async function shibZUnlockAudio(){
   shibZInitAudioCtx();
@@ -1078,7 +1117,9 @@ function shibZSavePrefs(){
       showLyricsSeparator,
       verifyLyrics,
       saySyllablesOutLoud,
-      ttsLeadMs
+      ttsLeadMs,
+      waveformVolume,
+      ttsVolume
     }));
   } catch(e){}
 }
@@ -1109,6 +1150,8 @@ function shibZApplyPrefs(){
   shibZSetVerifyLyrics(typeof prefs.verifyLyrics === 'boolean' ? prefs.verifyLyrics : false, false);
   shibZSetSaySyllablesOutLoud(typeof prefs.saySyllablesOutLoud === 'boolean' ? prefs.saySyllablesOutLoud : false, false);
   shibZSetTtsLeadMs(typeof prefs.ttsLeadMs === 'number' ? prefs.ttsLeadMs : DEFAULT_TTS_LEAD_MS, false);
+  shibZSetWaveformVolume(typeof prefs.waveformVolume === 'number' ? prefs.waveformVolume : DEFAULT_WAVEFORM_VOLUME, false);
+  shibZSetTtsVolume(typeof prefs.ttsVolume === 'number' ? prefs.ttsVolume : DEFAULT_TTS_VOLUME, false);
 }
 function shibZSaveSession(){
   shibZSavePrefs();
@@ -1743,11 +1786,9 @@ function shibZStartExternalMode(){
 
 async function shibZPlay(){
   if(!shibZHasTimeline()) return;
+  shibZPrimeTts();
   selectedTap = null;
   if(audioBuffer) await shibZUnlockAudio();
-  else {
-    try { await shibZUnlockAudio(); } catch(e){}
-  }
   const dur = shibZDuration();
   if(audioBuffer && pausedAt >= dur) pausedAt = 0;
   if(sourceNode){try{sourceNode.stop()}catch(e){}}
@@ -1757,7 +1798,8 @@ async function shibZPlay(){
     sourceNode = audioCtx.createBufferSource();
     sourceNode.buffer = audioBuffer;
     sourceNode.playbackRate.value = playbackRate;
-    sourceNode.connect(audioCtx.destination);
+    const gain = shibZEnsureGain();
+    sourceNode.connect(gain || audioCtx.destination);
     const thisSource = sourceNode;
     sourceNode.onended = ()=>{
       if(sourceNode !== thisSource) return;
@@ -1775,7 +1817,14 @@ async function shibZPlay(){
   startedAt = audioCtx ? audioCtx.currentTime : 0;
   clockOriginPerf = performance.now();
   isPlaying=true;
+  ttsVoiceWarnLang = '';
   shibZResetTtsCursor(pausedAt);
+  if(saySyllablesOutLoud){
+    shibZMaybeHydrateTapLyrics();
+    if(!tapLyrics.some(s => String(s||'').trim())){
+      shibZSetGenerateStatus('Say syllables out loud needs lyrics on the taps.', 'error');
+    }
+  }
   rewindBanner.style.display='none';
   shibZSyncPlayBtn();
 }
@@ -2271,15 +2320,69 @@ function shibZSetVerifyLyrics(on, save){
 
 const TTS_LANG_ALIASES = {
   english:'en', spanish:'es', french:'fr', german:'de', italian:'it', portuguese:'pt',
-  japanese:'ja', korean:'ko', chinese:'zh-CN', mandarin:'zh-CN', hindi:'hi', arabic:'ar',
+  japanese:'ja', korean:'ko', chinese:'zh-CN', mandarin:'zh-CN', hindi:'hi-IN', arabic:'ar',
   russian:'ru', dutch:'nl', swedish:'sv', norwegian:'nb', danish:'da', finnish:'fi',
   polish:'pl', turkish:'tr', greek:'el', hebrew:'he', thai:'th', vietnamese:'vi',
-  indonesian:'id', malay:'ms', czech:'cs', hungarian:'hu', romanian:'ro', ukrainian:'uk',
-  catalan:'ca', tamil:'ta', telugu:'te', bengali:'bn'
+  indonesian:'id', malay:'ms', malayalam:'ml-IN', 'മലയാളം':'ml-IN',
+  kannada:'kn-IN', marathi:'mr-IN', gujarati:'gu-IN', punjabi:'pa-IN',
+  sinhala:'si-LK', odia:'or-IN', oriya:'or-IN',
+  czech:'cs', hungarian:'hu', romanian:'ro', ukrainian:'uk',
+  catalan:'ca', tamil:'ta-IN', telugu:'te-IN', bengali:'bn-IN'
+};
+const TTS_LANG_LABELS = {
+  en:'English', es:'Spanish', fr:'French', de:'German', it:'Italian', pt:'Portuguese',
+  ja:'Japanese', ko:'Korean', zh:'Chinese', hi:'Hindi', ar:'Arabic', ru:'Russian',
+  ml:'Malayalam', ta:'Tamil', te:'Telugu', kn:'Kannada', mr:'Marathi', gu:'Gujarati',
+  pa:'Punjabi', si:'Sinhala', or:'Odia', bn:'Bengali', th:'Thai', vi:'Vietnamese',
+  id:'Indonesian', ms:'Malay', he:'Hebrew', nl:'Dutch', sv:'Swedish', pl:'Polish',
+  tr:'Turkish', el:'Greek', cs:'Czech', hu:'Hungarian', ro:'Romanian', uk:'Ukrainian',
+  ca:'Catalan', nb:'Norwegian', da:'Danish', fi:'Finnish'
+};
+const TTS_VOICE_NAME_HINTS = {
+  ml:['malayalam','midhun','sobin'],
+  ta:['tamil'],
+  te:['telugu'],
+  kn:['kannada'],
+  hi:['hindi','devanagari'],
+  mr:['marathi'],
+  gu:['gujarati'],
+  pa:['punjabi'],
+  bn:['bengali','bangla'],
+  si:['sinhala'],
+  or:['odia','oriya']
 };
 
+function shibZEnsureTtsFrame(){
+  if(ttsFrame && ttsFrame.parentNode) return ttsFrame;
+  ttsFrame = document.createElement('iframe');
+  ttsFrame.id = 'tts-frame';
+  ttsFrame.title = 'Syllable voice';
+  ttsFrame.setAttribute('aria-hidden', 'true');
+  ttsFrame.tabIndex = -1;
+  ttsFrame.style.cssText = 'position:absolute;width:1px;height:1px;left:0;top:0;opacity:0;border:0;pointer-events:none';
+  ttsFrame.srcdoc = '<!doctype html><title>tts</title>';
+  document.body.appendChild(ttsFrame);
+  return ttsFrame;
+}
+function shibZTtsWin(){
+  shibZEnsureTtsFrame();
+  try {
+    if(ttsFrame && ttsFrame.contentWindow) return ttsFrame.contentWindow;
+  } catch(e){}
+  return window;
+}
+function shibZTtsSynth(){
+  const w = shibZTtsWin();
+  return w.speechSynthesis || window.speechSynthesis;
+}
 function shibZTtsSupported(){
-  return typeof window.speechSynthesis !== 'undefined' && typeof window.SpeechSynthesisUtterance === 'function';
+  try {
+    const w = shibZTtsWin();
+    return typeof (w.speechSynthesis || window.speechSynthesis) !== 'undefined'
+      && typeof (w.SpeechSynthesisUtterance || window.SpeechSynthesisUtterance) === 'function';
+  } catch(e){
+    return typeof window.speechSynthesis !== 'undefined' && typeof window.SpeechSynthesisUtterance === 'function';
+  }
 }
 
 function shibZTtsLang(){
@@ -2288,8 +2391,83 @@ function shibZTtsLang(){
   if(/^[a-z]{2}([-_][A-Za-z0-9]+)?$/i.test(raw)) return raw.replace('_','-');
   return TTS_LANG_ALIASES[raw.toLowerCase()] || raw;
 }
+function shibZLangFromScript(text){
+  const s = String(text||'');
+  if(/[\u0D00-\u0D7F]/.test(s)) return 'ml-IN';
+  if(/[\u0B80-\u0BFF]/.test(s)) return 'ta-IN';
+  if(/[\u0C00-\u0C7F]/.test(s)) return 'te-IN';
+  if(/[\u0C80-\u0CFF]/.test(s)) return 'kn-IN';
+  if(/[\u0D80-\u0DFF]/.test(s)) return 'si-LK';
+  if(/[\u0A80-\u0AFF]/.test(s)) return 'gu-IN';
+  if(/[\u0A00-\u0A7F]/.test(s)) return 'pa-IN';
+  if(/[\u0980-\u09FF]/.test(s)) return 'bn-IN';
+  if(/[\u0B00-\u0B7F]/.test(s)) return 'or-IN';
+  if(/[\u0900-\u097F]/.test(s)) return 'hi-IN';
+  if(/[\u3040-\u30FF]/.test(s)) return 'ja-JP';
+  if(/[\uAC00-\uD7AF]/.test(s)) return 'ko-KR';
+  if(/[\u4E00-\u9FFF]/.test(s)) return 'zh-CN';
+  if(/[\u0600-\u06FF]/.test(s)) return 'ar';
+  if(/[\u0400-\u04FF]/.test(s)) return 'ru-RU';
+  if(/[\u0E00-\u0E7F]/.test(s)) return 'th-TH';
+  if(/[\u0590-\u05FF]/.test(s)) return 'he-IL';
+  return '';
+}
+function shibZTtsLangForText(text){
+  return shibZLangFromScript(text) || shibZTtsLang();
+}
+function shibZTtsLangLabel(lang){
+  const p = String(lang||'').toLowerCase().replace('_','-').slice(0,2);
+  return TTS_LANG_LABELS[p] || lang || 'this language';
+}
+function shibZTtsNeedsMatchingVoice(lang){
+  const p = String(lang||'').toLowerCase().slice(0,2);
+  return !({en:1, es:1, fr:1, de:1, it:1, pt:1, nl:1, sv:1, nb:1, da:1, fi:1, pl:1, tr:1, cs:1, hu:1, ro:1, ca:1}[p]);
+}
+
+function shibZPickTtsVoice(synth, lang){
+  const voices = (synth && synth.getVoices && synth.getVoices()) || [];
+  const tag = String(lang||'en').toLowerCase().replace('_','-');
+  const prefix = tag.slice(0,2);
+  const labels = TTS_VOICE_NAME_HINTS[prefix] || [];
+  const match = (v)=>{
+    const l = (v.lang||'').toLowerCase().replace('_','-');
+    if(l === tag || l.startsWith(prefix)) return true;
+    const n = (v.name||'').toLowerCase();
+    return labels.some(h => n.includes(h));
+  };
+  return voices.find(v => v.localService && match(v))
+    || voices.find(v => match(v))
+    || null;
+}
+function shibZWarnMissingTtsVoice(lang, force){
+  const key = String(lang||'').toLowerCase().slice(0,2);
+  if(!force && ttsVoiceWarnLang === key) return;
+  ttsVoiceWarnLang = key;
+  const label = shibZTtsLangLabel(lang);
+  shibZSetGenerateStatus('No '+label+' speech voice on this computer. English voices stay silent on '+label+' lyrics. Add a '+label+' voice in Windows Settings → Time & language → Speech, then click Test voice.', 'error');
+}
+
+function shibZStartTtsWatch(){
+  if(ttsResumeTimer) return;
+  ttsResumeTimer = setInterval(()=>{
+    try {
+      const s = shibZTtsSynth();
+      if(s && s.paused) s.resume();
+    } catch(e){}
+  }, 2500);
+}
+function shibZStopTtsWatch(){
+  if(!ttsResumeTimer) return;
+  clearInterval(ttsResumeTimer);
+  ttsResumeTimer = null;
+}
 
 function shibZCancelTts(){
+  if(ttsSpeakTimer){
+    clearTimeout(ttsSpeakTimer);
+    ttsSpeakTimer = null;
+  }
+  try { const s = shibZTtsSynth(); if(s) s.cancel(); } catch(e){}
   try { if(window.speechSynthesis) speechSynthesis.cancel(); } catch(e){}
 }
 
@@ -2301,29 +2479,123 @@ function shibZResetTtsCursor(playT){
   });
 }
 
-function shibZSpeakSyllable(text){
-  if(!saySyllablesOutLoud || !shibZTtsSupported()) return;
+function shibZPrimeTts(){
+  if(!shibZTtsSupported()) return;
+  shibZEnsureTtsFrame();
+  const synth = shibZTtsSynth();
+  try { if(synth && synth.getVoices) synth.getVoices(); } catch(e){}
+  try { if(synth && synth.paused) synth.resume(); } catch(e){}
+  if(ttsPrimed) return;
+  try {
+    const w = shibZTtsWin();
+    const Ctor = w.SpeechSynthesisUtterance || window.SpeechSynthesisUtterance;
+    const warm = new Ctor(' ');
+    warm.volume = 0;
+    warm.rate = 10;
+    warm.lang = 'en-US';
+    ttsUtterance = warm;
+    synth.speak(warm);
+    ttsPrimed = true;
+  } catch(e){}
+}
+
+function shibZSpeakText(text){
+  if(!shibZTtsSupported()) return;
   const raw = String(text||'').replace(/\s+/g,' ').trim();
   if(!raw) return;
-  try {
-    speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(raw);
-    const lang = shibZTtsLang();
-    u.lang = lang;
-    u.rate = 1.15;
-    u.volume = 1;
-    const voices = speechSynthesis.getVoices() || [];
-    const tag = lang.toLowerCase();
-    const voice = voices.find(v => (v.lang||'').toLowerCase() === tag)
-      || voices.find(v => (v.lang||'').toLowerCase().startsWith(tag.slice(0,2)));
-    if(voice) u.voice = voice;
-    speechSynthesis.speak(u);
-  } catch(e){}
+  const vol = shibZClamp(ttsVolume, 0, 100) / 100;
+  if(vol <= 0) return;
+  if(ttsSpeakTimer){
+    clearTimeout(ttsSpeakTimer);
+    ttsSpeakTimer = null;
+  }
+  const start = ()=>{
+    ttsSpeakTimer = null;
+    try {
+      const w = shibZTtsWin();
+      const synth = shibZTtsSynth();
+      if(synth.paused) synth.resume();
+      const Ctor = w.SpeechSynthesisUtterance || window.SpeechSynthesisUtterance;
+      const u = new Ctor(raw);
+      ttsUtterance = u;
+      const lang = shibZTtsLangForText(raw);
+      u.rate = 1;
+      u.pitch = 1;
+      u.volume = vol;
+      const voice = shibZPickTtsVoice(synth, lang);
+      if(voice){
+        u.voice = voice;
+        u.lang = voice.lang || lang;
+      } else {
+        u.lang = lang;
+        if(shibZTtsNeedsMatchingVoice(lang)) shibZWarnMissingTtsVoice(lang, false);
+      }
+      u.onend = ()=>{ if(ttsUtterance === u) ttsUtterance = null; };
+      u.onerror = (ev)=>{
+        if(ttsUtterance === u) ttsUtterance = null;
+        const err = ev && ev.error;
+        if(err && err !== 'canceled' && err !== 'interrupted'){
+          shibZSetGenerateStatus('Could not speak ('+err+'). Try Test voice in Settings.', 'error');
+        }
+      };
+      synth.speak(u);
+    } catch(e){}
+  };
+  const synth = shibZTtsSynth();
+  const busy = !!(synth && (synth.speaking || synth.pending));
+  if(busy){
+    try { synth.cancel(); } catch(e){}
+    ttsSpeakTimer = setTimeout(start, 40);
+  } else {
+    start();
+  }
+}
+
+function shibZSpeakSyllable(text){
+  if(!saySyllablesOutLoud) return;
+  shibZSpeakText(text);
+}
+
+function shibZTestTtsSample(){
+  shibZMaybeHydrateTapLyrics();
+  const fromLyric = (tapLyrics||[]).map(s => String(s||'').trim()).find(s => s);
+  if(fromLyric) return fromLyric;
+  const lang = shibZTtsLangForText('');
+  const p = String(lang||'').toLowerCase().slice(0,2);
+  if(p==='ml') return 'പരീക്ഷണം';
+  if(p==='ta') return 'சோதனை';
+  if(p==='te') return 'పరీక్ష';
+  if(p==='kn') return 'ಪರೀಕ್ಷೆ';
+  if(p==='hi') return 'परीक्षण';
+  if(p==='bn') return 'পরীক্ষা';
+  if(p==='gu') return 'પરીક્ષણ';
+  if(p==='pa') return 'ਪਰਖ';
+  if(p==='mr') return 'चाचणी';
+  return 'Testing voice';
+}
+function shibZTestTtsVoice(){
+  if(!shibZTtsSupported()){
+    shibZSetGenerateStatus('This browser has no built-in speech voice.', 'error');
+    return;
+  }
+  if(shibZClamp(ttsVolume, 0, 100) <= 0){
+    shibZSetGenerateStatus('Say-syllable volume is 0%.', 'error');
+    return;
+  }
+  shibZPrimeTts();
+  const sample = shibZTestTtsSample();
+  const lang = shibZTtsLangForText(sample);
+  const synth = shibZTtsSynth();
+  if(shibZTtsNeedsMatchingVoice(lang) && !shibZPickTtsVoice(synth, lang)){
+    shibZWarnMissingTtsVoice(lang, true);
+  }
+  shibZSpeakText(sample);
 }
 
 function shibZSyncTts(playT){
   if(!saySyllablesOutLoud || !isPlaying || !shibZTtsSupported()) return;
-  shibZEnsureTapLyrics();
+  shibZMaybeHydrateTapLyrics();
+  try { const s = shibZTtsSynth(); if(s && s.paused) s.resume(); } catch(e){}
   const lead = Math.max(0, ttsLeadMs)/1000;
   const fireAt = playT + lead;
   const sorted = [...taps].sort((a,b)=>a-b);
@@ -2334,7 +2606,8 @@ function shibZSyncTts(playT){
     const key = shibZTapKey(tap);
     if(ttsSpokenKeys[key]) continue;
     ttsSpokenKeys[key] = true;
-    spoken = shibZLyricAtTap(tap);
+    const word = String(shibZLyricAtTap(tap)||'').replace(/\s+/g,' ').trim();
+    if(word) spoken = word;
   }
   if(spoken) shibZSpeakSyllable(spoken);
 }
@@ -2355,8 +2628,14 @@ function shibZSyncSaySyllablesChk(){
 function shibZSetSaySyllablesOutLoud(on, save){
   saySyllablesOutLoud = !!on && shibZTtsSupported();
   shibZSyncSaySyllablesChk();
-  if(!saySyllablesOutLoud) shibZCancelTts();
-  else if(isPlaying) shibZResetTtsCursor(shibZCurrentTime());
+  if(!saySyllablesOutLoud){
+    shibZCancelTts();
+    shibZStopTtsWatch();
+  } else {
+    shibZStartTtsWatch();
+    if(save !== false) shibZPrimeTts();
+    if(isPlaying) shibZResetTtsCursor(shibZCurrentTime());
+  }
   if(save !== false) shibZSavePrefs();
 }
 
@@ -2365,6 +2644,26 @@ function shibZSetTtsLeadMs(ms, save){
   ttsLeadMs = isFinite(n) ? Math.max(0, Math.min(300, n)) : DEFAULT_TTS_LEAD_MS;
   if(ttsLeadSlider) ttsLeadSlider.value = String(ttsLeadMs);
   if(ttsLeadVal) ttsLeadVal.textContent = Math.round(ttsLeadMs)+'ms';
+  if(save !== false) shibZSavePrefs();
+}
+
+function shibZSetWaveformVolume(pct, save){
+  const n = Number(pct);
+  waveformVolume = isFinite(n) ? Math.round(shibZClamp(n, 0, 100)) : DEFAULT_WAVEFORM_VOLUME;
+  if(waveformVolSlider) waveformVolSlider.value = String(waveformVolume);
+  if(waveformVolVal) waveformVolVal.textContent = waveformVolume+'%';
+  if(masterGain) masterGain.gain.value = waveformVolume / 100;
+  if(save !== false) shibZSavePrefs();
+}
+
+function shibZSetTtsVolume(pct, save){
+  const n = Number(pct);
+  ttsVolume = isFinite(n) ? Math.round(shibZClamp(n, 0, 100)) : DEFAULT_TTS_VOLUME;
+  if(ttsVolSlider) ttsVolSlider.value = String(ttsVolume);
+  if(ttsVolVal) ttsVolVal.textContent = ttsVolume+'%';
+  if(ttsUtterance){
+    try { ttsUtterance.volume = ttsVolume / 100; } catch(e){}
+  }
   if(save !== false) shibZSavePrefs();
 }
 
@@ -3590,9 +3889,35 @@ if(saySyllablesChk){
     shibZSetSaySyllablesOutLoud(saySyllablesChk.checked);
   });
 }
+if(shibZTtsSupported()){
+  try {
+    const synth = shibZTtsSynth();
+    synth.getVoices();
+    synth.addEventListener('voiceschanged', ()=>{ try { shibZTtsSynth().getVoices(); } catch(e){} });
+  } catch(e){}
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.hidden || !saySyllablesOutLoud) return;
+    try { const s = shibZTtsSynth(); if(s && s.paused) s.resume(); } catch(e){}
+  });
+}
 if(ttsLeadSlider){
   ttsLeadSlider.addEventListener('input', ()=>{
     shibZSetTtsLeadMs(parseFloat(ttsLeadSlider.value));
+  });
+}
+if(waveformVolSlider){
+  waveformVolSlider.addEventListener('input', ()=>{
+    shibZSetWaveformVolume(parseFloat(waveformVolSlider.value));
+  });
+}
+if(ttsVolSlider){
+  ttsVolSlider.addEventListener('input', ()=>{
+    shibZSetTtsVolume(parseFloat(ttsVolSlider.value));
+  });
+}
+if(ttsTestBtn){
+  ttsTestBtn.addEventListener('click', ()=>{
+    shibZTestTtsVoice();
   });
 }
 if(phraseOrderBtn){
