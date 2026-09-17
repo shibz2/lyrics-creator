@@ -101,38 +101,48 @@ section h2 .icon{font-size:1.1rem}
 #phrase-table col.col-dur{width:4.2rem}
 #phrase-table .col-phrase{width:4.4rem}
 #phrase-table .col-count{width:5rem}
-#phrase-table .col-visual,#phrase-table td.visual-cell{width:auto;min-width:12rem;vertical-align:middle;overflow:visible}
+#phrase-table .col-visual,#phrase-table td.visual-cell{width:auto;min-width:12rem;vertical-align:top;overflow:visible}
 #phrase-table th.col-visual{text-align:center}
 #phrase-table .col-time,#phrase-table td.time-cell{width:4.8rem;padding-left:4px;padding-right:4px;white-space:nowrap;font-variant-numeric:tabular-nums;font-size:.72rem}
 #phrase-table .col-dur,#phrase-table td.dur-cell{width:4.2rem;padding-left:4px;padding-right:4px;white-space:nowrap;font-variant-numeric:tabular-nums;font-size:.72rem}
-#phrase-table .visual-frame{display:block;width:100%;min-width:0;line-height:0}
-#phrase-table .phrase-visual{display:block;width:100%;height:auto;aspect-ratio:320/40;color:var(--text);overflow:visible}
+#phrase-table .visual-frame{position:relative;display:block;width:100%;min-width:0;line-height:0}
+#phrase-table .phrase-visual{display:block;width:100%;height:auto;color:var(--text);overflow:visible}
 #phrase-table .phrase-visual.has-lyrics{width:100%}
 #phrase-table .phrase-visual.mismatch text{fill:var(--orange)}
+#phrase-table .freeze-box{fill:rgba(74,222,128,.12);stroke:var(--green);stroke-width:1.8;pointer-events:none}
+#phrase-table .lyric-slot.frozen,
+#phrase-table .lyric-slot.frozen.played,
+#phrase-table .lyric-slot.frozen.active{border-color:var(--green);border-width:1.8px;background:rgba(74,222,128,.14);box-shadow:0 0 0 1px var(--green)}
+#phrase-table .lyric-layer{position:absolute;inset:0;pointer-events:none}
+#phrase-table .lyric-slot{position:absolute;transform:translate(-50%,0);pointer-events:auto;box-sizing:border-box;margin:0;border:1px solid rgba(255,255,255,.92);border-radius:3px;background:rgba(17,17,24,.62);color:var(--text);font:700 9px/1.15 'Segoe UI',system-ui,sans-serif;text-align:center;padding:0 2px;min-width:0;z-index:1;cursor:text}
+#phrase-table .lyric-slot:focus{outline:2px solid var(--accent);outline-offset:0;background:rgba(17,17,24,.92);z-index:2}
+#phrase-table .lyric-slot.played{border-color:#fff}
+#phrase-table .lyric-slot.active{border-color:#fff;box-shadow:0 0 0 1px #fff}
+#phrase-table .lyric-slot.miss{border-color:var(--red);background:rgba(255,85,85,.22)}
+#phrase-table .lyric-slot.extra{border-color:var(--red);color:#ffb4b4;cursor:default;display:flex;align-items:center;justify-content:center}
 #phrase-table .lyric-miss-slot,#phrase-table .lyric-extra-bg{fill:rgba(255,85,85,.28);stroke:var(--red);stroke-width:1.15;pointer-events:none}
-#phrase-table .tap-lyric.extra{fill:#ffb4b4;font-weight:700}
 #phrase-table .count-mismatch{color:var(--red);font-weight:700}
 #phrase-table tr.verify-mismatch td,#phrase-table tr.verify-extra td{background:rgba(255,85,85,.06)}
+#phrase-table .lyric-slot.frozen.miss{border-color:var(--green);background:rgba(74,222,128,.18)}
 #phrase-table .tap-dot,#phrase-table .tap-hit{cursor:pointer}
 #phrase-table .tap-dot.kind-s,#phrase-table .tap-dot.kind-l,#phrase-table .tap-dot.kind-u{cursor:pointer}
 #phrase-table .tap-dot.played{filter:brightness(1.35)}
 #phrase-table .tap-dot.active{stroke:#fff;stroke-width:2.4;filter:drop-shadow(0 0 5px #fff)}
-#phrase-table .tap-lyric{pointer-events:auto;cursor:context-menu;opacity:.9}
-#phrase-table .tap-lyric.played{opacity:1}
-#phrase-table .tap-lyric.active{font-weight:700;opacity:1;filter:brightness(1.2)}
 .phrase-diagram{margin-top:16px;border:1px solid var(--border);border-radius:10px;padding:14px 16px 12px;background:rgba(0,0,0,.18)}
 .phrase-diagram h3{font-size:.9rem;font-weight:600;margin:0 0 10px}
 .phrase-table-bar{display:flex;align-items:center;gap:10px;margin:0 0 8px;flex-wrap:wrap}
 .phrase-table-bar .hint{font-size:.78rem;color:var(--text-dim)}
 .confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:80;padding:16px}
 .confirm-overlay.show{display:flex}
-.confirm-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 22px;max-width:360px;width:100%}
+.confirm-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 22px;max-width:440px;width:100%}
 .confirm-box p{margin-bottom:16px;line-height:1.45}
 .confirm-actions{display:flex;gap:10px;justify-content:flex-end}
 .kind-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
 .kind-choice{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:92px;padding:10px 8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);border-radius:10px;cursor:pointer;font-size:.78rem;font-weight:600}
 .kind-choice svg{display:block;width:28px;height:28px}
 .kind-choice:hover,.kind-choice.active{border-color:var(--accent);color:#fff}
+.kind-choice.freeze{color:var(--green)}
+.kind-choice.freeze:hover,.kind-choice.freeze.active{border-color:var(--green);color:var(--green);background:rgba(74,222,128,.14)}
 .rhythm-pattern{font-family:'SF Mono',Consolas,monospace;font-size:.75rem;color:var(--accent);letter-spacing:.04em;word-break:break-word}
 
 .slider-row{display:flex;align-items:center;gap:12px;margin-top:10px;flex-wrap:wrap}
@@ -316,7 +326,7 @@ section h2 .icon{font-size:1.1rem}
       <div class="phrase-table-bar">
         <button type="button" class="btn btn-ghost" id="phrase-order-btn">Flip order</button>
         <span class="hint" id="phrase-order-label">Newest first</span>
-        <span class="hint">Click a marker to set short/long · Right-click to delete</span>
+        <span class="hint">Click a marker to set short/long/freeze · Click a box to edit lyrics · Ctrl-click or right-click a syllable to freeze · Right-click a waveform tap to delete</span>
         <span class="hint rhythm-pattern" id="rhythm-pattern"></span>
       </div>
       <div id="phrase-table-wrap">
@@ -352,6 +362,10 @@ section h2 .icon{font-size:1.1rem}
         <input type="checkbox" id="show-separator-chk">
         Show separator
       </label>
+      <label class="lyrics-sep-toggle">
+        <input type="checkbox" id="say-syllables-chk">
+        Say syllables out loud
+      </label>
       <button type="button" class="btn btn-ghost" id="copy-lyrics-btn">Copy</button>
       <span id="copy-lyrics-confirm">Copied!</span>
     </div>
@@ -384,6 +398,12 @@ section h2 .icon{font-size:1.1rem}
           <button type="button" class="btn btn-ghost btn-toggle" id="verify-lyrics-toggle" aria-pressed="false">Disabled</button>
         </div>
         <p class="setting-help">When enabled, checks that generated lyrics match the rhythm pattern. Extra or missing syllables are marked in red. Off by default.</p>
+        <div class="slider-row">
+          <label for="tts-lead-slider">Say-syllable head start:</label>
+          <input type="range" id="tts-lead-slider" min="0" max="300" step="5" value="50">
+          <span class="val" id="tts-lead-val">50ms</span>
+        </div>
+        <p class="setting-help">When “Say syllables out loud” is on, the browser voice starts this many milliseconds before each tap, to cover TTS delay. Default 50ms. Uses the device’s built-in voice; the audio file never leaves this tab.</p>
         <div class="slider-row" id="device-skew-row">
           <label for="device-skew-slider">Output / Bluetooth latency:</label>
           <button type="button" class="btn btn-ghost btn-toggle" id="device-skew-toggle" aria-pressed="false">Disabled</button>
@@ -407,17 +427,19 @@ section h2 .icon{font-size:1.1rem}
             <tr><td>; or :</td><td>Long syllable (oval) while playing, or retag the selected tap</td></tr>
             <tr><td>' or "</td><td>Short syllable (diamond) while playing, or retag the selected tap</td></tr>
             <tr><td>1 / 2</td><td>Set the selected syllable to short (diamond) / long (oval)</td></tr>
-            <tr><td>Click a tap marker</td><td>Choose unmarked, short (diamond), or long (oval)</td></tr>
+            <tr><td>Click a tap marker</td><td>Choose unmarked, short (diamond), long (oval), or freeze that syllable</td></tr>
+            <tr><td>Click a lyric box</td><td>Type or edit the syllable for that tap. Empty boxes are placeholders until you add lyrics</td></tr>
+            <tr><td>Ctrl-click or right-click a syllable</td><td>Freeze / unfreeze that syllable (green outline). Frozen syllables stay put when you re-generate lyrics</td></tr>
             <tr><td>← / →</td><td>Seek backward / forward 2 seconds</td></tr>
             <tr><td>, / .</td><td>Select the previous / next syllable tap on the waveform and phrase diagram</td></tr>
             <tr><td>Enter or New line</td><td>Phrase boundary (X in the rhythm pattern). Optionally also taps, from Settings</td></tr>
             <tr><td>Backspace</td><td>Delete last tap · Pause · Seek to the previous tap on the waveform</td></tr>
             <tr><td>Start</td><td>Jump to the beginning of the waveform</td></tr>
             <tr><td>First tap</td><td>Jump to the first recorded syllable on the waveform</td></tr>
-            <tr><td>Replay taps</td><td>Play from the first tap and flash each recorded syllable (no file needed in external mode)</td></tr>
+            <tr><td>Say syllables out loud</td><td>When enabled, playback speaks each lyric at its tap (starts early by the Settings head start)</td></tr>
             <tr><td>Clear &amp; Start Over</td><td>After Yes, clear lyrics and taps and return to the start of the waveform</td></tr>
             <tr><td>Export MP3 with metadata</td><td>Save a copy of the loaded MP3 with tap data in an ID3v2 tag (MP3 only). Loading that file restores the taps.</td></tr>
-            <tr><td>Right-click / long-press a tap</td><td>Delete that syllable on the waveform or phrase diagram (asks Yes / No)</td></tr>
+            <tr><td>Right-click / long-press a waveform tap</td><td>Delete that syllable on the waveform (asks Yes / No)</td></tr>
             <tr><td>Wheel on waveform</td><td>Zoom in / out · Shift+wheel scrolls sideways</td></tr>
           </table>
         </div>
@@ -450,6 +472,10 @@ section h2 .icon{font-size:1.1rem}
           <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="5" fill="currentColor"/></svg>
           Unmarked
         </button>
+        <button type="button" class="kind-choice freeze" id="kind-freeze" data-kind="freeze" title="Freeze this syllable">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3.5" y="4.5" width="13" height="11" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+          Freeze
+        </button>
       </div>
       <div class="confirm-actions">
         <button type="button" class="btn btn-ghost" id="kind-cancel">Cancel</button>
@@ -473,6 +499,7 @@ const SPEED_RATES = [2, 1, 0.75, 0.5, 0.33, 0.25, 0.15];
 const SEEK_STEP = 2;
 const DEFAULT_DEVICE_SKEW_MS = 500;
 const DEFAULT_REACTION_SKEW_MS = 100;
+const DEFAULT_TTS_LEAD_MS = 50;
 const DEFAULT_LANG = 'English';
 const DEFAULT_STYLE = 'romantic';
 const EXTERNAL_FILE_NAME = 'External audio';
@@ -480,7 +507,7 @@ const EXTERNAL_MIN_DURATION = 60;
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 16;
 const MP3_TXXX_DESC = 'shibZ.taps';
-const APP_VERSION = 'v13';
+const APP_VERSION = 'v14';
 const GITHUB_TAGS_URL = 'https://api.github.com/repos/shibz2/lyrics-creator/tags?per_page=40';
 const RESERVED_CODES = new Set([
   'Space','Backspace','Enter','NumpadEnter','Tab','Escape','CapsLock','ControlLeft','ControlRight',
@@ -505,6 +532,8 @@ let pausedAt = 0;
 let playbackRate = 1;
 let taps = [];
 let tapKinds = [];
+let tapLyrics = [];
+let frozenTapKeys = [];
 let manualBreaks = [];
 let gapThreshold = 1.5;
 let waveformData = null;
@@ -518,6 +547,9 @@ let phraseNewestFirst = true;
 let enterTapsNewLine = true;
 let showLyricsSeparator = false;
 let verifyLyrics = false;
+let saySyllablesOutLoud = false;
+let ttsLeadMs = DEFAULT_TTS_LEAD_MS;
+let ttsSpokenKeys = {};
 let isReplaying = false;
 let replayFiredUpTo = -1;
 let replayActiveTap = null;
@@ -526,6 +558,8 @@ let replayFlashTimer = null;
 let lastHighlightKey = '';
 let lyricsRaw = '';
 let lyricsGeneratedOnce = false;
+let lyricSyncLock = false;
+let skipLyricFocusRestore = false;
 let generateBusy = false;
 let selectedTap = null;
 let debugSentPrompt = '';
@@ -571,6 +605,7 @@ const debugOutputEl = document.getElementById('debug-output');
 const debugInputEl = document.getElementById('debug-input');
 const eggO = document.getElementById('egg-o');
 const showSeparatorChk = document.getElementById('show-separator-chk');
+const saySyllablesChk = document.getElementById('say-syllables-chk');
 const copyLyricsBtn = document.getElementById('copy-lyrics-btn');
 const copyLyricsConfirm = document.getElementById('copy-lyrics-confirm');
 const exportBtn = document.getElementById('export-btn');
@@ -591,6 +626,8 @@ const deviceSkewVal = document.getElementById('device-skew-val');
 const deviceSkewToggle = document.getElementById('device-skew-toggle');
 const enterTapToggle = document.getElementById('enter-tap-toggle');
 const verifyLyricsToggle = document.getElementById('verify-lyrics-toggle');
+const ttsLeadSlider = document.getElementById('tts-lead-slider');
+const ttsLeadVal = document.getElementById('tts-lead-val');
 const deviceSkewRow = document.getElementById('device-skew-row');
 const reactionSkewSlider = document.getElementById('reaction-skew-slider');
 const reactionSkewVal = document.getElementById('reaction-skew-val');
@@ -656,6 +693,113 @@ function shibZEnsureTapKinds(){
   if(tapKinds.length===taps.length) return;
   tapKinds = shibZAlignTapKinds(tapKinds, taps.length);
 }
+function shibZAlignTapLyrics(raw, n){
+  const src = Array.isArray(raw) ? raw : [];
+  const out = [];
+  for(let i=0;i<n;i++) out.push(typeof src[i]==='string' ? src[i] : '');
+  return out;
+}
+function shibZEnsureTapLyrics(){
+  if(!Array.isArray(tapLyrics)) tapLyrics = [];
+  if(tapLyrics.length===taps.length) return;
+  tapLyrics = shibZAlignTapLyrics(tapLyrics, taps.length);
+}
+function shibZLyricAtIndex(idx){
+  shibZEnsureTapLyrics();
+  return (idx>=0 && idx<tapLyrics.length) ? String(tapLyrics[idx]||'') : '';
+}
+function shibZLyricAtTap(tap){
+  return shibZLyricAtIndex(shibZFindTapIndex(tap));
+}
+function shibZSetLyricAtIndex(idx, text, opts){
+  shibZEnsureTapLyrics();
+  if(idx<0 || idx>=taps.length) return false;
+  let v = String(text==null?'':text);
+  if(!opts || opts.trim!==false) v = v.replace(/\s+/g,' ').trim();
+  else v = v.replace(/[\r\n]+/g,' ');
+  tapLyrics[idx] = v;
+  return true;
+}
+function shibZHydrateTapLyricsFromRaw(raw, opts){
+  shibZEnsureTapLyrics();
+  const phrases = shibZDetectPhrases();
+  const parsed = shibZParseAllLyricPhrases(raw);
+  phrases.forEach((ph, i)=>{
+    const row = parsed[i] || [];
+    ph.forEach((t, j)=>{
+      if(opts && opts.skipFrozen && shibZTapIsFrozen(t)) return;
+      const idx = shibZFindTapIndex(t);
+      if(idx>=0) tapLyrics[idx] = row[j] || '';
+    });
+  });
+}
+function shibZComposeLyricsRaw(){
+  shibZEnsureTapLyrics();
+  const phrases = shibZDetectPhrases();
+  const parsed = shibZParseAllLyricPhrases(lyricsRaw || '');
+  const n = Math.max(phrases.length, parsed.length);
+  const lines = [];
+  for(let i=0;i<n;i++){
+    const ph = phrases[i] || [];
+    const words = ph.map(t => shibZLyricAtTap(t));
+    const extra = (parsed[i] || []).slice(ph.length);
+    if(ph.length || extra.length) lines.push(words.concat(extra).join(' | '));
+  }
+  return lines.join(' X\n');
+}
+function shibZMaybeHydrateTapLyrics(){
+  shibZEnsureTapLyrics();
+  if(tapLyrics.some(s => String(s||'').trim())) return;
+  const raw = lyricsRaw || lyricsOutput?.value || '';
+  if(!String(raw).trim()) return;
+  shibZHydrateTapLyricsFromRaw(raw, { skipFrozen:false });
+}
+function shibZSyncLyricsBoxFromTaps(){
+  lyricSyncLock = true;
+  lyricsRaw = shibZComposeLyricsRaw();
+  if(tapLyrics.some(s => String(s||'').trim())) lyricsGeneratedOnce = true;
+  if(lyricsOutput) lyricsOutput.value = shibZDisplayLyrics(lyricsRaw);
+  try { localStorage.setItem(GENERATED_KEY, lyricsRaw); } catch(e){}
+  lyricSyncLock = false;
+  shibZSyncGenerateButtons();
+  shibZSaveSession();
+}
+function shibZPruneFrozenKeys(){
+  const live = {};
+  taps.forEach(t => { live[shibZTapKey(t)] = true; });
+  frozenTapKeys = frozenTapKeys.filter(k => live[k]);
+}
+function shibZFitLyricSlot(slot){
+  if(!slot) return;
+  const frame = slot.closest('.visual-frame');
+  const W = parseFloat(frame && frame.style.getPropertyValue('--vb-w')) || 320;
+  slot.style.width = (shibZLyricSlotWidth(slot.value)/W*100).toFixed(2)+'%';
+}
+function shibZReadFrozenKeys(raw){
+  const a = Array.isArray(raw && raw.frozenTapKeys) ? raw.frozenTapKeys : [];
+  const b = Array.isArray(raw && raw.frozenPhraseKeys) ? raw.frozenPhraseKeys : [];
+  const seen = {};
+  const out = [];
+  a.concat(b).forEach(v => {
+    const k = String(v||'');
+    if(!k || seen[k]) return;
+    seen[k] = true;
+    out.push(k);
+  });
+  return out;
+}
+function shibZTapIsFrozen(tap){
+  const key = shibZTapKey(tap);
+  return !!key && frozenTapKeys.indexOf(key)>=0;
+}
+function shibZToggleFrozenKey(key){
+  if(!key) return;
+  const i = frozenTapKeys.indexOf(key);
+  if(i>=0) frozenTapKeys.splice(i,1);
+  else frozenTapKeys.push(key);
+  shibZUpdatePhraseTable();
+  shibZSaveSession();
+}
 function shibZKindAtIndex(idx){
   shibZEnsureTapKinds();
   return (idx>=0 && idx<tapKinds.length) ? shibZNormKind(tapKinds[idx]) : '';
@@ -675,8 +819,11 @@ function shibZSetKindAtTap(tap, kind){
 function shibZPushTap(time, kind){
   taps.push(time);
   shibZEnsureTapKinds();
+  shibZEnsureTapLyrics();
   if(tapKinds.length<taps.length) tapKinds.push(shibZNormKind(kind));
   else tapKinds[taps.length-1] = shibZNormKind(kind);
+  if(tapLyrics.length<taps.length) tapLyrics.push('');
+  else if(tapLyrics.length>taps.length) tapLyrics = shibZAlignTapLyrics(tapLyrics, taps.length);
 }
 function shibZPatternSlot(kind){
   return kind==='L' ? 'L' : 'S';
@@ -929,7 +1076,9 @@ function shibZSavePrefs(){
       phraseNewestFirst,
       enterTapsNewLine,
       showLyricsSeparator,
-      verifyLyrics
+      verifyLyrics,
+      saySyllablesOutLoud,
+      ttsLeadMs
     }));
   } catch(e){}
 }
@@ -958,6 +1107,8 @@ function shibZApplyPrefs(){
   shibZSetEnterTapsNewLine(typeof prefs.enterTapsNewLine === 'boolean' ? prefs.enterTapsNewLine : true);
   shibZSetShowLyricsSeparator(typeof prefs.showLyricsSeparator === 'boolean' ? prefs.showLyricsSeparator : false, false);
   shibZSetVerifyLyrics(typeof prefs.verifyLyrics === 'boolean' ? prefs.verifyLyrics : false, false);
+  shibZSetSaySyllablesOutLoud(typeof prefs.saySyllablesOutLoud === 'boolean' ? prefs.saySyllablesOutLoud : false, false);
+  shibZSetTtsLeadMs(typeof prefs.ttsLeadMs === 'number' ? prefs.ttsLeadMs : DEFAULT_TTS_LEAD_MS, false);
 }
 function shibZSaveSession(){
   shibZSavePrefs();
@@ -968,6 +1119,9 @@ function shibZSaveSession(){
       externalDuration,
       taps,
       tapKinds,
+      tapLyrics: shibZAlignTapLyrics(tapLyrics, taps.length),
+      frozenTapKeys: frozenTapKeys.slice(),
+      lyrics: lyricsRaw || '',
       manualBreaks,
       gapThreshold,
       playbackRate,
@@ -984,7 +1138,18 @@ function shibZApplySession(session){
   if(!session) return;
   taps = Array.isArray(session.taps) ? session.taps.slice() : [];
   tapKinds = shibZAlignTapKinds(session.tapKinds, taps.length);
+  tapLyrics = shibZAlignTapLyrics(session.tapLyrics, taps.length);
+  frozenTapKeys = shibZReadFrozenKeys(session);
   manualBreaks = Array.isArray(session.manualBreaks) ? session.manualBreaks.slice() : [];
+  if(typeof session.lyrics === 'string' && session.lyrics.trim() && !tapLyrics.some(s => String(s||'').trim())){
+    lyricsRaw = session.lyrics;
+    shibZHydrateTapLyricsFromRaw(session.lyrics, { skipFrozen:false });
+  }
+  if(tapLyrics.some(s => String(s||'').trim())){
+    lyricsGeneratedOnce = true;
+    lyricsRaw = shibZComposeLyricsRaw();
+    if(lyricsOutput) lyricsOutput.value = shibZDisplayLyrics(lyricsRaw);
+  }
   if(typeof session.gapThreshold === 'number'){
     gapThreshold = session.gapThreshold;
     gapSlider.value = String(gapThreshold);
@@ -1027,13 +1192,16 @@ function shibZSafeFileSlug(name){
 function shibZBuildExport(){
   return {
     app: 'shibZ-lyrics-creator',
-    version: 2,
+    version: 3,
     exportedAt: new Date().toISOString(),
     fileName: currentFileName || '',
     externalMode,
     duration: audioBuffer ? audioBuffer.duration : (externalMode ? shibZDuration() : null),
     taps: taps.slice(),
     tapKinds: shibZAlignTapKinds(tapKinds, taps.length),
+    tapLyrics: shibZAlignTapLyrics(tapLyrics, taps.length),
+    frozenTapKeys: frozenTapKeys.slice(),
+    lyrics: lyricsRaw || '',
     manualBreaks: manualBreaks.slice(),
     gapThreshold,
     playbackRate,
@@ -1174,17 +1342,6 @@ function shibZApplyEmbeddedTapData(data){
     );
   }
   shibZApplyImportedTaps(session);
-  if(lyricsOutput){
-    if(typeof data.lyrics === 'string' && data.lyrics.trim()){
-      shibZStoreGenerated(data.lyrics);
-    } else {
-      lyricsRaw = '';
-      lyricsGeneratedOnce = false;
-      lyricsOutput.value = '';
-      try { localStorage.removeItem(GENERATED_KEY); } catch(e){}
-      shibZSetGenerateStatus('');
-    }
-  }
   shibZSavePrefs();
   return true;
 }
@@ -1292,60 +1449,73 @@ function shibZNormalizeImported(data){
   const rawTaps = Array.isArray(data.taps) ? data.taps : null;
   if(!rawTaps) return null;
   const rawKinds = Array.isArray(data.tapKinds) ? data.tapKinds : [];
+  const rawLyrics = Array.isArray(data.tapLyrics) ? data.tapLyrics : [];
   const dur = audioBuffer ? audioBuffer.duration + 0.02 : null;
   const nextTaps = [];
   const nextKinds = [];
+  const nextLyrics = [];
   rawTaps.forEach((raw, i)=>{
     const n = Number(raw);
     if(!isFinite(n) || n<0) return;
     if(dur!=null && n>dur) return;
     nextTaps.push(n);
     nextKinds.push(shibZNormKind(rawKinds[i]));
+    nextLyrics.push(typeof rawLyrics[i]==='string' ? rawLyrics[i] : '');
   });
+  const liveKeys = {};
+  nextTaps.forEach(t => { liveKeys[Number(t).toFixed(6)] = true; });
+  const nextFrozen = shibZReadFrozenKeys(data).filter(k => liveKeys[k]);
   const nextBreaks = Array.isArray(data.manualBreaks) ? data.manualBreaks.map(Number).filter(n => isFinite(n) && n>=0 && (dur==null || n<=dur)) : [];
-  if(audioBuffer){
-    return {
-      fileName: typeof data.fileName === 'string' ? data.fileName : '',
-      taps: nextTaps,
-      tapKinds: nextKinds,
-      manualBreaks: nextBreaks,
-      gapThreshold: typeof data.gapThreshold === 'number' ? data.gapThreshold : gapThreshold,
-      playbackRate: typeof data.playbackRate === 'number' ? data.playbackRate : playbackRate,
-      deviceSkewMs: typeof data.deviceSkewMs === 'number' ? data.deviceSkewMs : deviceSkewMs,
-      deviceSkewEnabled: typeof data.deviceSkewEnabled === 'boolean' ? data.deviceSkewEnabled : deviceSkewEnabled,
-      reactionSkewMs: typeof data.reactionSkewMs === 'number' ? data.reactionSkewMs : reactionSkewMs,
-      lang: typeof data.lang === 'string' ? data.lang : langInput.value,
-      style: typeof data.style === 'string' ? data.style : styleInput.value,
-      extra: '',
-      externalMode: !!data.externalMode || data.fileName === EXTERNAL_FILE_NAME,
-      duration: typeof data.duration === 'number' ? data.duration : undefined,
-      externalDuration: typeof data.externalDuration === 'number' ? data.externalDuration : undefined
-    };
-  }
-  return {
+  const shared = {
     fileName: typeof data.fileName === 'string' ? data.fileName : '',
     taps: nextTaps,
     tapKinds: nextKinds,
+    tapLyrics: nextLyrics,
+    frozenTapKeys: nextFrozen,
+    lyrics: typeof data.lyrics === 'string' ? data.lyrics : '',
     manualBreaks: nextBreaks,
-    gapThreshold: typeof data.gapThreshold === 'number' ? data.gapThreshold : 1.5,
-    playbackRate: typeof data.playbackRate === 'number' ? data.playbackRate : 1,
     deviceSkewMs: typeof data.deviceSkewMs === 'number' ? data.deviceSkewMs : deviceSkewMs,
     deviceSkewEnabled: typeof data.deviceSkewEnabled === 'boolean' ? data.deviceSkewEnabled : deviceSkewEnabled,
     reactionSkewMs: typeof data.reactionSkewMs === 'number' ? data.reactionSkewMs : reactionSkewMs,
-    lang: typeof data.lang === 'string' ? data.lang : '',
-    style: typeof data.style === 'string' ? data.style : '',
-    extra: typeof data.extra === 'string' ? data.extra : '',
+    extra: '',
     externalMode: !!data.externalMode || data.fileName === EXTERNAL_FILE_NAME,
     duration: typeof data.duration === 'number' ? data.duration : undefined,
     externalDuration: typeof data.externalDuration === 'number' ? data.externalDuration : undefined
   };
+  if(audioBuffer){
+    return Object.assign(shared, {
+      gapThreshold: typeof data.gapThreshold === 'number' ? data.gapThreshold : gapThreshold,
+      playbackRate: typeof data.playbackRate === 'number' ? data.playbackRate : playbackRate,
+      lang: typeof data.lang === 'string' ? data.lang : langInput.value,
+      style: typeof data.style === 'string' ? data.style : styleInput.value
+    });
+  }
+  return Object.assign(shared, {
+    gapThreshold: typeof data.gapThreshold === 'number' ? data.gapThreshold : 1.5,
+    playbackRate: typeof data.playbackRate === 'number' ? data.playbackRate : 1,
+    lang: typeof data.lang === 'string' ? data.lang : '',
+    style: typeof data.style === 'string' ? data.style : '',
+    extra: typeof data.extra === 'string' ? data.extra : ''
+  });
 }
 
 function shibZApplyImportedTaps(session){
   taps = session.taps;
   tapKinds = shibZAlignTapKinds(session.tapKinds, taps.length);
+  tapLyrics = shibZAlignTapLyrics(session.tapLyrics, taps.length);
+  frozenTapKeys = shibZReadFrozenKeys(session);
   manualBreaks = session.manualBreaks;
   selectedTap = null;
+  if(typeof session.lyrics === 'string' && session.lyrics.trim() && !tapLyrics.some(s => String(s||'').trim())){
+    lyricsRaw = session.lyrics;
+    shibZHydrateTapLyricsFromRaw(session.lyrics, { skipFrozen:false });
+  }
+  if(tapLyrics.some(s => String(s||'').trim())){
+    lyricsGeneratedOnce = true;
+    lyricsRaw = shibZComposeLyricsRaw();
+    if(lyricsOutput) lyricsOutput.value = shibZDisplayLyrics(lyricsRaw);
+    try { localStorage.setItem(GENERATED_KEY, lyricsRaw); } catch(e){}
+  }
   if(typeof session.gapThreshold === 'number'){
     gapThreshold = session.gapThreshold;
     if(gapSlider) gapSlider.value = String(gapThreshold);
@@ -1494,6 +1664,8 @@ async function shibZLoadFile(file){
   } else {
     taps = [];
     tapKinds = [];
+    tapLyrics = [];
+    frozenTapKeys = [];
     manualBreaks = [];
   }
 
@@ -1603,6 +1775,7 @@ async function shibZPlay(){
   startedAt = audioCtx ? audioCtx.currentTime : 0;
   clockOriginPerf = performance.now();
   isPlaying=true;
+  shibZResetTtsCursor(pausedAt);
   rewindBanner.style.display='none';
   shibZSyncPlayBtn();
 }
@@ -1651,6 +1824,7 @@ function shibZPause(keepReplay){
     isPlaying=false;
     shibZSyncPlayBtn();
   }
+  shibZCancelTts();
   if(!keepReplay) shibZEndReplay();
 }
 
@@ -1853,16 +2027,20 @@ function shibZParseLyricLines(raw, phraseCount){
 }
 
 function shibZLyricsVerifyReport(){
+  shibZMaybeHydrateTapLyrics();
   const phrases = shibZDetectPhrases();
-  const got = shibZParseAllLyricPhrases(lyricsRaw || lyricsOutput?.value || '');
-  const hasLyrics = got.some(p => p.length);
+  const parsed = shibZParseAllLyricPhrases(lyricsRaw || lyricsOutput?.value || '');
+  const got = phrases.map((ph, i) => ph.map(t => shibZLyricAtTap(t)).concat((parsed[i] || []).slice(ph.length)));
+  parsed.slice(phrases.length).forEach(row => got.push(row.slice()));
+  const hasLyrics = got.some(p => p.length && p.some(s => String(s||'').trim()));
   if(!hasLyrics || !phrases.length) return { ok:true, empty:true, phrases, got };
   let extraSlots = 0, missingSlots = 0;
   const n = Math.max(phrases.length, got.length);
   for(let i=0;i<n;i++){
     const exp = phrases[i]?.length || 0;
-    const act = got[i]?.length || 0;
-    if(act>exp) extraSlots += act-exp;
+    const act = (got[i]||[]).filter(s => String(s||'').trim()).length;
+    const actLen = (got[i]||[]).length;
+    if(actLen>exp) extraSlots += actLen-exp;
     if(act<exp) missingSlots += exp-act;
   }
   return {
@@ -1877,7 +2055,27 @@ function shibZLyricsVerifyReport(){
 
 function shibZLyricSlotWidth(text){
   const n = String(text||'').length;
-  return Math.max(16, Math.min(44, 8 + n*4.6));
+  if(!n) return 22;
+  return Math.max(22, Math.min(56, 10 + n*5));
+}
+
+function shibZAssignOverlapLanes(items){
+  const lanes = [];
+  const laneOf = [];
+  items.forEach((it)=>{
+    const left = it.x - it.w/2;
+    const right = it.x + it.w/2;
+    let lane = 0;
+    for(;;){
+      if(!lanes[lane]){ lanes[lane] = []; break; }
+      const clash = lanes[lane].some(o => !(right <= o.left + 0.5 || left >= o.right - 0.5));
+      if(!clash) break;
+      lane++;
+    }
+    lanes[lane].push({ left, right });
+    laneOf.push(lane);
+  });
+  return { laneCount: Math.max(1, lanes.length), laneOf };
 }
 
 function shibZSyncPhraseOrderBtn(){
@@ -1886,25 +2084,68 @@ function shibZSyncPhraseOrderBtn(){
   if(phraseOrderBtn) phraseOrderBtn.setAttribute('aria-pressed', phraseNewestFirst ? 'true' : 'false');
 }
 
+function shibZSlotLayerStyle(x, y, w, h, W, H){
+  return `left:${(x/W*100).toFixed(2)}%;top:${(y/H*100).toFixed(2)}%;width:${(w/W*100).toFixed(2)}%;height:${(h/H*100).toFixed(2)}%`;
+}
+
 function shibZVisualPhrase(ph, color, syllables, opts){
   const tapsPh = Array.isArray(ph) ? ph : [];
   const syl = Array.isArray(syllables) ? syllables : [];
-  const hasLyrics = syl.some(s=>s);
   const verifyOn = !!(opts && opts.verify);
   const extraSyl = verifyOn ? syl.slice(tapsPh.length) : [];
-  const H = 40;
+  const hasLyrics = syl.some(s=>s);
   const pad = 10;
   const lineY = 10;
   const baseW = 320;
+  const boxH = 16;
+  const laneStep = 18;
+  const boxTop = 20;
   let xs = [];
   if(tapsPh.length){
     const start=tapsPh[0], end=tapsPh[tapsPh.length-1];
     const span=Math.max(end-start, 0.08);
     xs=tapsPh.map(t => tapsPh.length===1 ? baseW/2 : pad+((t-start)/span)*(baseW-pad*2));
   }
-  const extraStart = xs.length ? xs[xs.length-1] + 24 : pad + 8;
-  const extraXs = extraSyl.map((_, i) => extraStart + i * 30);
-  const W = Math.max(baseW, extraXs.length ? extraXs[extraXs.length-1] + pad + 16 : baseW);
+  const extraStart = xs.length ? xs[xs.length-1] + 28 : pad + 12;
+  const extraXs = extraSyl.map((_, i) => extraStart + i * 32);
+  let W = Math.max(baseW, extraXs.length ? extraXs[extraXs.length-1] + pad + 20 : baseW);
+
+  const slots = [];
+  xs.forEach((x, idx)=>{
+    const text = syl[idx] || '';
+    const tapKey = Number(tapsPh[idx]).toFixed(6);
+    slots.push({
+      x, w: shibZLyricSlotWidth(text), text,
+      tapKey,
+      extra: false,
+      miss: verifyOn && !text,
+      frozen: shibZTapIsFrozen(tapsPh[idx])
+    });
+  });
+  extraXs.forEach((x, i)=>{
+    const word = extraSyl[i];
+    slots.push({ x, w: shibZLyricSlotWidth(word), text: word, extra: true, miss: false, frozen: false });
+  });
+  if(!slots.length){
+    slots.push({ x: pad+16, w: 22, text: '', extra: false, miss: false, placeholder: true, frozen: false });
+  }
+
+  const { laneOf } = shibZAssignOverlapLanes(slots);
+  let minLeft = Infinity, maxRight = -Infinity, maxLane = 0;
+  slots.forEach((s, i)=>{
+    s.lane = laneOf[i] || 0;
+    s.y = boxTop + s.lane * laneStep;
+    minLeft = Math.min(minLeft, s.x - s.w/2);
+    maxRight = Math.max(maxRight, s.x + s.w/2);
+    maxLane = Math.max(maxLane, s.lane);
+  });
+  W = Math.max(W, maxRight + pad);
+  const phraseX = Math.max(2, minLeft - 4);
+  const phraseW = Math.min(W - phraseX - 2, Math.max(24, maxRight + 4 - phraseX));
+  const phraseY = boxTop - 3;
+  const phraseH = (maxLane + 1) * laneStep + 4;
+  const H = Math.max(40, phraseY + phraseH + 4);
+
   let svg=`<line x1="${pad}" y1="${lineY}" x2="${Math.max(pad, W-pad)}" y2="${lineY}" stroke="${color}" stroke-opacity="0.28" stroke-width="2" stroke-linecap="round"/>`;
   for(let i=1;i<xs.length;i++){
     const gap=tapsPh[i]-tapsPh[i-1];
@@ -1914,22 +2155,30 @@ function shibZVisualPhrase(ph, color, syllables, opts){
       svg+=`<circle cx="${x.toFixed(1)}" cy="${lineY}" r="1.3" fill="${color}" fill-opacity="0.35"/>`;
     }
   }
+  svg+=`<rect class="phrase-box" x="${phraseX.toFixed(1)}" y="${phraseY.toFixed(1)}" width="${phraseW.toFixed(1)}" height="${phraseH.toFixed(1)}" rx="3"/>`;
+  slots.forEach(s=>{
+    if(!s.frozen) return;
+    svg+=`<rect class="freeze-box" x="${(s.x-s.w/2-1.5).toFixed(1)}" y="${(s.y-1.5).toFixed(1)}" width="${(s.w+3).toFixed(1)}" height="${(boxH+3).toFixed(1)}" rx="3"/>`;
+  });
   xs.forEach((x, idx)=>{
     const tapKey = Number(tapsPh[idx]).toFixed(6);
-    if(verifyOn && !syl[idx]){
-      svg+=`<rect class="lyric-miss-slot" x="${(x-10).toFixed(1)}" y="22" width="20" height="16" rx="3"/>`;
-    }
     svg+=shibZTapShapeSvg(x, lineY, shibZKindAtTap(tapsPh[idx]), color, tapKey);
-    if(syl[idx]){
-      svg+=`<text class="tap-lyric" data-tap="${tapKey}" x="${x.toFixed(1)}" y="34" text-anchor="middle" fill="${color}" font-size="9" font-family="Segoe UI,system-ui,sans-serif">${shibZEscXml(syl[idx])}</text>`;
+  });
+
+  const layer = slots.map(s=>{
+    const style = shibZSlotLayerStyle(s.x, s.y, s.w, boxH, W, H);
+    if(s.extra){
+      return `<span class="lyric-slot extra" style="${style}">${shibZEscXml(s.text)}</span>`;
     }
-  });
-  extraXs.forEach((x, i)=>{
-    const word = extraSyl[i];
-    const bw = shibZLyricSlotWidth(word);
-    svg+=`<rect class="lyric-extra-bg" x="${(x-bw/2).toFixed(1)}" y="22" width="${bw.toFixed(1)}" height="16" rx="3"/>`;
-    svg+=`<text class="tap-lyric extra" x="${x.toFixed(1)}" y="34" text-anchor="middle" font-size="9" font-family="Segoe UI,system-ui,sans-serif">${shibZEscXml(word)}</text>`;
-  });
+    if(s.placeholder){
+      return `<span class="lyric-slot" style="${style}"></span>`;
+    }
+    const miss = s.miss ? ' miss' : '';
+    const frozen = s.frozen ? ' frozen' : '';
+    const title = s.frozen ? 'Frozen syllable — Ctrl-click or right-click to unfreeze' : 'Edit syllable';
+    return `<input class="lyric-slot${miss}${frozen}" data-tap="${s.tapKey}" spellcheck="false" autocomplete="off" value="${shibZEscXml(s.text)}" title="${title}" aria-label="${s.frozen?'Frozen syllable lyric':'Syllable lyric'}" style="${style}">`;
+  }).join('');
+
   const gaps=tapsPh.slice(1).map((t,i)=>(t-tapsPh[i]).toFixed(2)+'s');
   const lyricLine = hasLyrics ? syl.join(' | ') : '';
   const label=tapsPh.length===1
@@ -1938,7 +2187,7 @@ function shibZVisualPhrase(ph, color, syllables, opts){
   const fullLabel = lyricLine ? label+' — '+lyricLine : label;
   const mismatch = hasLyrics && syl.length !== tapsPh.length;
   const cls = 'phrase-visual'+(hasLyrics?' has-lyrics':'')+(verifyOn && mismatch?' verify-bad':'')+(!verifyOn && mismatch?' mismatch':'');
-  return `<div class="visual-frame"><svg class="${cls}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${shibZEscXml(fullLabel)}"><title>${shibZEscXml(fullLabel)}</title>${svg}</svg></div>`;
+  return `<div class="visual-frame" style="--vb-w:${W};--vb-h:${H}"><svg class="${cls}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${shibZEscXml(fullLabel)}"><title>${shibZEscXml(fullLabel)}</title>${svg}</svg><div class="lyric-layer">${layer}</div></div>`;
 }
 
 function shibZRenderVerifyLine(expectedCount, syllables){
@@ -1946,7 +2195,7 @@ function shibZRenderVerifyLine(expectedCount, syllables){
   const n = Math.max(expectedCount, got.length);
   const bits = [];
   for(let k=0;k<n;k++){
-    if(k < expectedCount && k < got.length) bits.push(`<span class="ok">${shibZEscXml(got[k])}</span>`);
+    if(k < expectedCount && k < got.length && String(got[k]||'').trim()) bits.push(`<span class="ok">${shibZEscXml(got[k])}</span>`);
     else if(k < expectedCount) bits.push('<span class="miss" title="Missing syllable"></span>');
     else bits.push(`<span class="extra">${shibZEscXml(got[k])}</span>`);
   }
@@ -1956,7 +2205,7 @@ function shibZRenderVerifyLine(expectedCount, syllables){
 
 function shibZSyncLyricsVerifyView(phrases, allLyrics){
   if(!lyricsVerifyView) return;
-  const canVerify = verifyLyrics && (allLyrics||[]).some(p => p.length) && (phrases||[]).length;
+  const canVerify = verifyLyrics && (allLyrics||[]).some(p => (p||[]).some(s => String(s||'').trim())) && (phrases||[]).length;
   if(!canVerify){
     lyricsVerifyView.hidden = true;
     lyricsVerifyView.classList.remove('show');
@@ -1964,7 +2213,11 @@ function shibZSyncLyricsVerifyView(phrases, allLyrics){
     if(lyricsOutput) lyricsOutput.classList.remove('verify-bad');
     return;
   }
-  const reportOk = phrases.every((ph,i)=> (allLyrics[i]||[]).length === ph.length) && allLyrics.length <= phrases.length;
+  const reportOk = phrases.every((ph,i)=>{
+    const row = allLyrics[i] || [];
+    const filled = row.filter(s => String(s||'').trim()).length;
+    return filled === ph.length && row.length === ph.length;
+  }) && allLyrics.length <= phrases.length;
   if(reportOk){
     lyricsVerifyView.hidden = true;
     lyricsVerifyView.classList.remove('show');
@@ -2016,10 +2269,117 @@ function shibZSetVerifyLyrics(on, save){
   shibZSavePrefs();
 }
 
+const TTS_LANG_ALIASES = {
+  english:'en', spanish:'es', french:'fr', german:'de', italian:'it', portuguese:'pt',
+  japanese:'ja', korean:'ko', chinese:'zh-CN', mandarin:'zh-CN', hindi:'hi', arabic:'ar',
+  russian:'ru', dutch:'nl', swedish:'sv', norwegian:'nb', danish:'da', finnish:'fi',
+  polish:'pl', turkish:'tr', greek:'el', hebrew:'he', thai:'th', vietnamese:'vi',
+  indonesian:'id', malay:'ms', czech:'cs', hungarian:'hu', romanian:'ro', ukrainian:'uk',
+  catalan:'ca', tamil:'ta', telugu:'te', bengali:'bn'
+};
+
+function shibZTtsSupported(){
+  return typeof window.speechSynthesis !== 'undefined' && typeof window.SpeechSynthesisUtterance === 'function';
+}
+
+function shibZTtsLang(){
+  const raw = (langInput && langInput.value || '').trim();
+  if(!raw) return 'en';
+  if(/^[a-z]{2}([-_][A-Za-z0-9]+)?$/i.test(raw)) return raw.replace('_','-');
+  return TTS_LANG_ALIASES[raw.toLowerCase()] || raw;
+}
+
+function shibZCancelTts(){
+  try { if(window.speechSynthesis) speechSynthesis.cancel(); } catch(e){}
+}
+
+function shibZResetTtsCursor(playT){
+  ttsSpokenKeys = {};
+  const t = (typeof playT === 'number' && isFinite(playT)) ? playT : 0;
+  [...taps].sort((a,b)=>a-b).forEach(tap=>{
+    if(tap < t - 0.0005) ttsSpokenKeys[shibZTapKey(tap)] = true;
+  });
+}
+
+function shibZSpeakSyllable(text){
+  if(!saySyllablesOutLoud || !shibZTtsSupported()) return;
+  const raw = String(text||'').replace(/\s+/g,' ').trim();
+  if(!raw) return;
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(raw);
+    const lang = shibZTtsLang();
+    u.lang = lang;
+    u.rate = 1.15;
+    u.volume = 1;
+    const voices = speechSynthesis.getVoices() || [];
+    const tag = lang.toLowerCase();
+    const voice = voices.find(v => (v.lang||'').toLowerCase() === tag)
+      || voices.find(v => (v.lang||'').toLowerCase().startsWith(tag.slice(0,2)));
+    if(voice) u.voice = voice;
+    speechSynthesis.speak(u);
+  } catch(e){}
+}
+
+function shibZSyncTts(playT){
+  if(!saySyllablesOutLoud || !isPlaying || !shibZTtsSupported()) return;
+  shibZEnsureTapLyrics();
+  const lead = Math.max(0, ttsLeadMs)/1000;
+  const fireAt = playT + lead;
+  const sorted = [...taps].sort((a,b)=>a-b);
+  let spoken = '';
+  for(let i=0;i<sorted.length;i++){
+    const tap = sorted[i];
+    if(tap > fireAt + 0.0005) break;
+    const key = shibZTapKey(tap);
+    if(ttsSpokenKeys[key]) continue;
+    ttsSpokenKeys[key] = true;
+    spoken = shibZLyricAtTap(tap);
+  }
+  if(spoken) shibZSpeakSyllable(spoken);
+}
+
+function shibZSyncSaySyllablesChk(){
+  if(!saySyllablesChk) return;
+  const ok = shibZTtsSupported();
+  saySyllablesChk.disabled = !ok;
+  saySyllablesChk.checked = !!saySyllablesOutLoud && ok;
+  if(!ok){
+    saySyllablesChk.title = 'This browser has no built-in speech voice';
+    saySyllablesOutLoud = false;
+  } else {
+    saySyllablesChk.title = 'Speak each lyric at its tap during playback';
+  }
+}
+
+function shibZSetSaySyllablesOutLoud(on, save){
+  saySyllablesOutLoud = !!on && shibZTtsSupported();
+  shibZSyncSaySyllablesChk();
+  if(!saySyllablesOutLoud) shibZCancelTts();
+  else if(isPlaying) shibZResetTtsCursor(shibZCurrentTime());
+  if(save !== false) shibZSavePrefs();
+}
+
+function shibZSetTtsLeadMs(ms, save){
+  const n = Number(ms);
+  ttsLeadMs = isFinite(n) ? Math.max(0, Math.min(300, n)) : DEFAULT_TTS_LEAD_MS;
+  if(ttsLeadSlider) ttsLeadSlider.value = String(ttsLeadMs);
+  if(ttsLeadVal) ttsLeadVal.textContent = Math.round(ttsLeadMs)+'ms';
+  if(save !== false) shibZSavePrefs();
+}
+
 function shibZUpdatePhraseTable(){
+  const active = document.activeElement;
+  const restoreTap = (active && active.classList && active.classList.contains('lyric-slot')) ? active.getAttribute('data-tap') : '';
+  const restoreStart = restoreTap ? active.selectionStart : null;
+  const restoreEnd = restoreTap ? active.selectionEnd : null;
+  shibZMaybeHydrateTapLyrics();
+  shibZPruneFrozenKeys();
   const phrases = shibZDetectPhrases();
-  const allLyrics = lyricsOutput ? shibZParseAllLyricPhrases(lyricsRaw || lyricsOutput.value) : [];
-  const canVerify = verifyLyrics && allLyrics.some(p => p.length);
+  const parsed = lyricsOutput ? shibZParseAllLyricPhrases(lyricsRaw || lyricsOutput.value) : [];
+  const allLyrics = phrases.map((ph, i) => ph.map(t => shibZLyricAtTap(t)).concat((parsed[i] || []).slice(ph.length)));
+  parsed.slice(phrases.length).forEach(row => allLyrics.push(row.slice()));
+  const canVerify = verifyLyrics && allLyrics.some(p => (p||[]).some(s => String(s||'').trim()));
   phraseTbody.innerHTML='';
   tapBadge.textContent = taps.length+' tap'+(taps.length===1?'':'s');
   lineBadge.textContent = phrases.length+' line'+(phrases.length===1?'':'s');
@@ -2056,8 +2416,10 @@ function shibZUpdatePhraseTable(){
     const color = PHRASE_COLORS[i%PHRASE_COLORS.length];
     const start=ph[0], end=ph[ph.length-1];
     const syl = allLyrics[i] || [];
-    const mismatch = canVerify && syl.length !== ph.length;
-    const countHtml = mismatch ? `<span class="count-mismatch">${syl.length} ≠ ${ph.length}</span>` : String(ph.length);
+    const filled = syl.filter(s => String(s||'').trim()).length;
+    const mismatch = canVerify && (filled !== ph.length || syl.length !== ph.length);
+    const shown = syl.length > ph.length ? syl.length : filled;
+    const countHtml = mismatch ? `<span class="count-mismatch">${shown} ≠ ${ph.length}</span>` : String(ph.length);
     const tr=document.createElement('tr');
     if(mismatch) tr.className = 'verify-mismatch';
     tr.innerHTML=`<td class="col-phrase"><span class="color-dot" style="background:${color}"></span>${i+1}</td><td class="col-count">${countHtml}</td><td class="visual-cell">${shibZVisualPhrase(ph,color,syl,{verify:canVerify})}</td><td class="time-cell">${shibZFmtTime(start)}</td><td class="time-cell">${shibZFmtTime(end)}</td><td class="dur-cell">${(end-start).toFixed(2)}s</td>`;
@@ -2069,6 +2431,15 @@ function shibZUpdatePhraseTable(){
   if(shibZHasTimeline()) shibZSyncTableHighlight(shibZCurrentTime());
   shibZSyncLyricsVerifyView(phrases, allLyrics);
   if(verifyLyrics) shibZSyncVerifyStatus();
+  if(restoreTap && phraseTbody && !skipLyricFocusRestore){
+    const el = phraseTbody.querySelector('.lyric-slot[data-tap="'+restoreTap+'"]');
+    if(el){
+      el.focus();
+      if(restoreStart!=null){
+        try { el.setSelectionRange(restoreStart, restoreEnd); } catch(e){}
+      }
+    }
+  }
 }
 
 function shibZTapKey(t){
@@ -2101,7 +2472,7 @@ function shibZSyncTableHighlight(playT){
   if(!phraseTbody) return;
   const active = shibZActivePlaybackTap(playT);
   const key = active==null ? '' : shibZTapKey(active);
-  phraseTbody.querySelectorAll('.tap-dot, .tap-lyric').forEach(el=>{
+  phraseTbody.querySelectorAll('.tap-dot, .lyric-slot[data-tap]').forEach(el=>{
     const tap=parseFloat(el.getAttribute('data-tap'));
     const played = isFinite(tap) && tap <= playT + 0.04;
     const on = key && el.getAttribute('data-tap')===key;
@@ -2154,6 +2525,8 @@ function shibZRemoveTapAt(tap){
   const removed=taps.splice(idx,1)[0];
   shibZEnsureTapKinds();
   tapKinds.splice(idx,1);
+  shibZEnsureTapLyrics();
+  tapLyrics.splice(idx,1);
   if(selectedTap!=null && Math.abs(selectedTap-removed)<0.0008) selectedTap=null;
   manualBreaks = manualBreaks.filter(mb => Math.abs(mb-removed)>0.0008);
   shibZUpdatePhraseTable();
@@ -2185,9 +2558,12 @@ function shibZOpenKindPicker(tap){
   if(!kindOverlay || !isFinite(tap) || shibZFindTapIndex(tap)<0) return;
   shibZCloseConfirm();
   const kind = shibZKindAtTap(tap);
-  if(kindText) kindText.textContent = 'Syllable at '+shibZFmtTime(tap)+' · currently '+shibZKindLabel(kind);
+  const frozen = shibZTapIsFrozen(tap);
+  if(kindText) kindText.textContent = 'Syllable at '+shibZFmtTime(tap)+' · currently '+shibZKindLabel(kind)+(frozen?' · frozen':'');
   kindOverlay.querySelectorAll('.kind-choice').forEach(btn=>{
-    btn.classList.toggle('active', shibZNormKind(btn.getAttribute('data-kind')) === kind);
+    const btnKind = btn.getAttribute('data-kind');
+    if(btnKind==='freeze') btn.classList.toggle('active', frozen);
+    else btn.classList.toggle('active', shibZNormKind(btnKind) === kind);
   });
   kindOverlay.setAttribute('data-tap', String(tap));
   selectedTap = tap;
@@ -2197,7 +2573,12 @@ function shibZOpenKindPicker(tap){
 function shibZApplyKindChoice(kind){
   const tap = parseFloat(kindOverlay?.getAttribute('data-tap'));
   shibZCloseKindPicker();
-  if(!isFinite(tap) || !shibZSetKindAtTap(tap, kind)) return;
+  if(!isFinite(tap) || shibZFindTapIndex(tap)<0) return;
+  if(kind==='freeze'){
+    shibZToggleFrozenKey(shibZTapKey(tap));
+    return;
+  }
+  if(!shibZSetKindAtTap(tap, kind)) return;
   shibZUpdatePhraseTable();
   shibZSaveSession();
 }
@@ -2280,6 +2661,8 @@ function shibZConfirmClearAndStartOver(){
 function shibZClearAndStartOver(){
   taps = [];
   tapKinds = [];
+  tapLyrics = [];
+  frozenTapKeys = [];
   manualBreaks = [];
   selectedTap = null;
   if(externalMode) externalDuration = EXTERNAL_MIN_DURATION;
@@ -2484,6 +2867,7 @@ function shibZDrawFrame(){
   timeDisplay.textContent=shibZFmtTime(t)+' / '+shibZFmtShort(dur);
   shibZFollowPlayhead();
   shibZSyncTableHighlight(t);
+  shibZSyncTts(t);
 
   if(isPlaying && audioBuffer && t>=dur){
     shibZPause();
@@ -2526,6 +2910,10 @@ canvas.addEventListener('click', e=>{
 
   const nearTap=shibZNearestTapAtClientX(e.clientX);
   if(nearTap!=null){
+    if(e.ctrlKey || e.metaKey){
+      shibZToggleFrozenKey(shibZTapKey(nearTap));
+      return;
+    }
     shibZOpenKindPicker(nearTap);
     return;
   }
@@ -2580,7 +2968,7 @@ canvas.addEventListener('mousemove', e=>{
     for(let p=0;p<phrases.length;p++){
       if(phrases[p].includes(sorted[closest])){phraseIdx=p+1;break;}
     }
-    tooltip.textContent=`Syllable ${closest+1} · ${shibZFmtTime(sorted[closest])} · ${shibZKindLabel(shibZKindAtTap(sorted[closest]))} · Phrase ${phraseIdx} · Click to set short/long · Right-click to delete`;
+    tooltip.textContent=`Syllable ${closest+1} · ${shibZFmtTime(sorted[closest])} · ${shibZKindLabel(shibZKindAtTap(sorted[closest]))} · Phrase ${phraseIdx} · Click to set short/long/freeze · Right-click to delete`;
     tooltip.style.display='block';
     tooltip.style.left=(tapPx)+'px';
     tooltip.style.top='-28px';
@@ -2627,15 +3015,78 @@ canvas.addEventListener('contextmenu', e=>{
 if(phraseTbody){
   phraseTbody.addEventListener('click', e=>{
     const tap=shibZTapFromTableEvent(e);
-    if(tap==null) return;
-    e.preventDefault();
-    shibZOpenKindPicker(tap);
+    if((e.ctrlKey || e.metaKey) && tap!=null){
+      e.preventDefault();
+      shibZToggleFrozenKey(shibZTapKey(tap));
+      return;
+    }
+    const slot = e.target.closest?.('.lyric-slot[data-tap]');
+    if(slot) return;
+    const frame = e.target.closest?.('.visual-frame');
+    if(e.target.closest?.('.tap-dot, .tap-hit')){
+      if(tap==null) return;
+      e.preventDefault();
+      shibZOpenKindPicker(tap);
+      return;
+    }
+    if(frame){
+      const slots = [...frame.querySelectorAll('.lyric-slot[data-tap]')];
+      const target = slots.find(s => !String(s.value||'').trim()) || slots[0];
+      if(target) target.focus();
+    }
   });
   phraseTbody.addEventListener('contextmenu', e=>{
+    if(!e.target.closest?.('.visual-frame, .lyric-slot')) return;
     const tap=shibZTapFromTableEvent(e);
     if(tap==null) return;
     e.preventDefault();
-    shibZConfirmDeleteTap(tap);
+    shibZToggleFrozenKey(shibZTapKey(tap));
+  }, true);
+  phraseTbody.addEventListener('input', e=>{
+    const slot = e.target.closest?.('.lyric-slot');
+    if(!slot || slot.classList.contains('extra') || slot.tagName!=='INPUT') return;
+    const idx = shibZFindTapIndex(slot.getAttribute('data-tap'));
+    if(idx<0) return;
+    shibZSetLyricAtIndex(idx, slot.value, { trim:false });
+    shibZFitLyricSlot(slot);
+    shibZSyncLyricsBoxFromTaps();
+  });
+  phraseTbody.addEventListener('focusin', e=>{
+    const slot = e.target.closest?.('.lyric-slot[data-tap]');
+    if(!slot) return;
+    const tap = parseFloat(slot.getAttribute('data-tap'));
+    if(isFinite(tap)) selectedTap = tap;
+  });
+  phraseTbody.addEventListener('focusout', e=>{
+    const slot = e.target.closest?.('.lyric-slot');
+    if(!slot || slot.classList.contains('extra') || slot.tagName!=='INPUT') return;
+    const idx = shibZFindTapIndex(slot.getAttribute('data-tap'));
+    if(idx<0) return;
+    const trimmed = String(slot.value||'').replace(/\s+/g,' ').trim();
+    tapLyrics[idx] = trimmed;
+    if(slot.value !== trimmed) slot.value = trimmed;
+    shibZSyncLyricsBoxFromTaps();
+    const next = e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('.lyric-slot');
+    if(!next){
+      skipLyricFocusRestore = true;
+      shibZUpdatePhraseTable();
+      skipLyricFocusRestore = false;
+    }
+  });
+  phraseTbody.addEventListener('keydown', e=>{
+    const slot = e.target.closest?.('.lyric-slot');
+    if(!slot || slot.tagName!=='INPUT') return;
+    if(e.code==='Enter' || e.code==='NumpadEnter'){
+      e.preventDefault();
+      e.stopPropagation();
+      const slots = [...phraseTbody.querySelectorAll('.lyric-slot[data-tap]')];
+      const i = slots.indexOf(slot);
+      if(i>=0 && i<slots.length-1) slots[i+1].focus();
+      else slot.blur();
+    } else if(e.code==='Escape'){
+      e.preventDefault();
+      slot.blur();
+    }
   });
 }
 
@@ -2811,6 +3262,8 @@ document.addEventListener('keydown', e=>{
     const removed=taps.pop();
     shibZEnsureTapKinds();
     tapKinds.pop();
+    shibZEnsureTapLyrics();
+    tapLyrics.pop();
     if(selectedTap!=null && Math.abs(selectedTap-removed)<0.0008) selectedTap=null;
     manualBreaks = manualBreaks.filter(mb => mb < removed);
     shibZPause();
@@ -2885,6 +3338,17 @@ function shibZBuildPrompt(){
   prompt+=`Whether the phrase boundary makes musical sense\n\n`;
   prompt+=`Return ONLY valid lyrics in ${lang}. Separate each syllable by a "|" and copy "X" as is from source.\n`;
   prompt+=`Here is the rhythmic pattern: ${pattern}`;
+  const frozenBits = [];
+  phrases.forEach((ph, i)=>{
+    ph.forEach((t, j)=>{
+      if(!shibZTapIsFrozen(t)) return;
+      frozenBits.push(`Phrase ${i+1} syllable ${j+1} is frozen — copy this exact syllable: ${shibZLyricAtTap(t) || '□'}`);
+    });
+  });
+  if(frozenBits.length){
+    prompt+=`\n\nFrozen syllables must appear unchanged in the same slot. Copy these exactly:\n`;
+    prompt+=frozenBits.join('\n')+'\n';
+  }
   return { ok:true, text:prompt };
 }
 
@@ -2896,6 +3360,7 @@ function shibZSetGenerateStatus(msg, kind){
 
 function shibZHasExistingLyrics(){
   if(lyricsGeneratedOnce) return true;
+  if(tapLyrics.some(s => String(s||'').trim())) return true;
   const text = (lyricsRaw || (lyricsOutput && lyricsOutput.value) || '');
   return text.trim().length > 0;
 }
@@ -2987,16 +3452,22 @@ function shibZClearGeneratedOnLoad(){
 }
 
 function shibZStoreGenerated(raw){
-  lyricsRaw = shibZStripLyricsMarkers(raw || '');
+  const stripped = shibZStripLyricsMarkers(raw || '');
+  shibZHydrateTapLyricsFromRaw(stripped, { skipFrozen: true });
+  lyricsRaw = shibZComposeLyricsRaw();
   lyricsGeneratedOnce = true;
   if(lyricsOutput) lyricsOutput.value = shibZDisplayLyrics(lyricsRaw);
   try { localStorage.setItem(GENERATED_KEY, lyricsRaw); } catch(e){}
+  shibZSaveSession();
 }
 
 function shibZRequestGenerate(){
   if(generateBusy || taps.length===0) return;
   if(shibZHasExistingLyrics()){
-    shibZOpenConfirm('regenerate-lyrics', 'Existing lyrics will be replaced. Continue?');
+    const msg = frozenTapKeys.length
+      ? 'Unfrozen syllables will be replaced. Frozen syllables stay as they are. Continue?'
+      : 'Existing lyrics will be replaced. Continue?';
+    shibZOpenConfirm('regenerate-lyrics', msg);
     return;
   }
   shibZGenerate();
@@ -3091,23 +3562,37 @@ generateBtn.addEventListener('click', shibZRequestGenerate);
 if(generateBtnBar) generateBtnBar.addEventListener('click', shibZRequestGenerate);
 if(copyLyricsBtn) copyLyricsBtn.addEventListener('click', shibZCopyLyrics);
 lyricsOutput.addEventListener('input', ()=>{
-  if(lyricsOutput.value.includes('|')){
-    lyricsRaw = shibZStripLyricsMarkers(lyricsOutput.value);
-  }
-  try { localStorage.setItem(GENERATED_KEY, lyricsRaw || lyricsOutput.value); } catch(e){}
+  if(lyricSyncLock) return;
+  lyricsRaw = lyricsOutput.value.includes('|') || /\bX\b/.test(lyricsOutput.value)
+    ? shibZStripLyricsMarkers(lyricsOutput.value)
+    : lyricsOutput.value;
+  shibZHydrateTapLyricsFromRaw(lyricsRaw, { skipFrozen:false });
+  try { localStorage.setItem(GENERATED_KEY, lyricsRaw); } catch(e){}
   shibZUpdatePhraseTable();
+  shibZSaveSession();
 });
 lyricsOutput.addEventListener('blur', ()=>{
-  if(lyricsOutput.value.includes('|')){
-    lyricsRaw = shibZStripLyricsMarkers(lyricsOutput.value);
-    try { localStorage.setItem(GENERATED_KEY, lyricsRaw); } catch(e){}
-  }
-  lyricsOutput.value = shibZDisplayLyrics(lyricsRaw || lyricsOutput.value);
+  if(lyricSyncLock) return;
+  lyricsRaw = shibZComposeLyricsRaw();
+  lyricSyncLock = true;
+  lyricsOutput.value = shibZDisplayLyrics(lyricsRaw);
+  lyricSyncLock = false;
+  try { localStorage.setItem(GENERATED_KEY, lyricsRaw); } catch(e){}
   shibZUpdatePhraseTable();
 });
 if(showSeparatorChk){
   showSeparatorChk.addEventListener('change', ()=>{
     shibZSetShowLyricsSeparator(showSeparatorChk.checked);
+  });
+}
+if(saySyllablesChk){
+  saySyllablesChk.addEventListener('change', ()=>{
+    shibZSetSaySyllablesOutLoud(saySyllablesChk.checked);
+  });
+}
+if(ttsLeadSlider){
+  ttsLeadSlider.addEventListener('input', ()=>{
+    shibZSetTtsLeadMs(parseFloat(ttsLeadSlider.value));
   });
 }
 if(phraseOrderBtn){
